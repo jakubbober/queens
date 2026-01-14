@@ -1,0 +1,36 @@
+.game-board {
+  display: grid;
+  grid-template-columns: repeat(9, 1fr);
+  gap: 0;
+  border: 3px solid #222;
+  background: #222;
+  touch-action: none;
+  cursor: pointer;
+}
+
+.game-board.dragging {
+  cursor: crosshair;
+}
+
+.game-board.dragging .cell {
+  cursor: crosshair;
+}
+
+.game-board-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 540px;
+  height: 540px;
+  background: #f5f5f5;
+  border-radius: 8px;
+  font-size: 16px;
+  color: #666;
+}
+
+@media (max-width: 600px) {
+  .game-board-loading {
+    width: 378px;
+    height: 378px;
+  }
+}
