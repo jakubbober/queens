@@ -235,6 +235,132 @@
   font-size: 13px;
 }
 
+/* Debug Panel */
+.debug-toggle {
+  position: fixed;
+  bottom: 10px;
+  right: 10px;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  border: none;
+  background: #333;
+  color: #999;
+  cursor: pointer;
+  font-size: 11px;
+  font-weight: 600;
+  opacity: 0.4;
+  transition: opacity 0.2s;
+}
+
+.debug-toggle:hover {
+  opacity: 1;
+  color: #fff;
+}
+
+.debug-panel {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 220px;
+  background: #1a1a1a;
+  border-top: 2px solid #333;
+  font-family: 'SF Mono', Monaco, 'Consolas', monospace;
+  font-size: 12px;
+  color: #fff;
+  z-index: 1000;
+  display: flex;
+  flex-direction: column;
+}
+
+.debug-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 12px;
+  background: #2a2a2a;
+  border-bottom: 1px solid #333;
+  flex-shrink: 0;
+}
+
+.debug-header span {
+  font-weight: 600;
+  color: #0a66c2;
+}
+
+.debug-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.debug-actions button {
+  padding: 4px 10px;
+  border: none;
+  border-radius: 4px;
+  background: #444;
+  color: #fff;
+  cursor: pointer;
+  font-size: 11px;
+}
+
+.debug-actions button:hover {
+  background: #555;
+}
+
+.debug-messages {
+  flex: 1;
+  overflow-y: auto;
+  padding: 8px;
+}
+
+.debug-empty {
+  color: #666;
+  font-style: italic;
+  padding: 20px;
+  text-align: center;
+}
+
+.debug-message {
+  padding: 4px 8px;
+  border-bottom: 1px solid #2a2a2a;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.debug-info .debug-text { color: #8bc34a; }
+.debug-warn .debug-text { color: #ff9800; }
+.debug-error .debug-text { color: #f44336; }
+
+.debug-time {
+  color: #666;
+  font-size: 10px;
+  min-width: 70px;
+}
+
+.debug-source {
+  color: #2196f3;
+  font-weight: 600;
+  min-width: 80px;
+}
+
+.debug-text {
+  flex: 1;
+}
+
+.debug-data {
+  width: 100%;
+  margin: 4px 0 4px 158px;
+  padding: 6px 8px;
+  background: #222;
+  border-radius: 4px;
+  font-size: 10px;
+  color: #aaa;
+  overflow-x: auto;
+}
+
 @media (max-width: 600px) {
   .controls {
     gap: 8px;
@@ -248,5 +374,14 @@
   .status-bar {
     gap: 12px;
     font-size: 12px;
+  }
+
+  .debug-panel {
+    height: 180px;
+    font-size: 11px;
+  }
+
+  .debug-data {
+    margin-left: 0;
   }
 }
