@@ -13,6 +13,7 @@ export function GameBoard() {
   const manualXs = useGameStore(state => state.manualXs)
   const settings = useGameStore(state => state.settings)
   const cycleCell = useGameStore(state => state.cycleCell)
+  const toggleManualX = useGameStore(state => state.toggleManualX)
   const isWon = useGameStore(state => state.isWon)
   const currentHint = useGameStore(state => state.currentHint)
   const clearHint = useGameStore(state => state.clearHint)
@@ -74,6 +75,18 @@ export function GameBoard() {
     cycleCell(row, col)
   }
 
+  const handleCellRightClick = (e: React.MouseEvent, row: number, col: number) => {
+    e.preventDefault()
+    if (isWon) return
+
+    // Clear hint when user interacts
+    if (currentHint) {
+      clearHint()
+    }
+
+    toggleManualX(row, col)
+  }
+
   return (
     <div
       ref={boardRef}
@@ -115,6 +128,7 @@ export function GameBoard() {
               borderLeft={borderLeft}
               borderRight={borderRight}
               onClick={() => handleCellClick(row, col)}
+              onContextMenu={(e) => handleCellRightClick(e, row, col)}
             />
           )
         })
