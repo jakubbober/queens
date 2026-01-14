@@ -5,6 +5,7 @@ import { Settings } from '../UI/Settings'
 import { StatusBar } from '../UI/StatusBar'
 import { WinModal } from '../UI/WinModal'
 import { HintDisplay } from '../UI/HintDisplay'
+import { DebugPanel } from '../UI/DebugPanel'
 import { useGameInit, useTimer, useKeyboardShortcuts } from '../../hooks/useGameStore'
 
 export function Game() {
@@ -30,6 +31,7 @@ export function Game() {
       <Controls />
       <Settings />
       <WinModal />
+      <DebugPanel />
     </div>
   )
 }
