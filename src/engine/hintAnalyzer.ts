@@ -1,8 +1,16 @@
 import { Position, Queen, AutoPlacedX, GRID_SIZE } from '../types/game'
 import { validatePlacement } from './validator'
 import { isValidPlacement } from './solver'
+import { debug } from '../store/debugStore'
 
-export type HintType = 'conflict' | 'naked_single_row' | 'naked_single_col' | 'naked_single_region' | 'elimination'
+export type HintType =
+  | 'conflict'
+  | 'naked_single_row'
+  | 'naked_single_col'
+  | 'naked_single_region'
+  | 'elimination'
+  | 'best_region'
+  | 'general_tip'
 
 export interface Hint {
   type: HintType
@@ -46,9 +54,91 @@ function isCellBlocked(
   queens: Queen[],
   regions: number[][]
 ): boolean {
-  // Check if placing a queen here would violate any rules
   const queenPositions = queens.map(q => q.position)
   return !isValidPlacement(queenPositions, regions, row, col)
+}
+
+// Get a general strategy tip based on game state
+function getGeneralTip(queensCount: number): Hint {
+  const tips = [
+    {
+      explanation: "Look for rows, columns, or regions with the fewest valid cells - they're easiest to solve!",
+      condition: () => queensCount < 3
+    },
+    {
+      explanation: "Remember: queens block all 8 adjacent cells (including diagonals). Use this to eliminate options.",
+      condition: () => queensCount < 4
+    },
+    {
+      explanation: "Try focusing on corner regions first - they often have more constraints.",
+      condition: () => queensCount < 5
+    },
+    {
+      explanation: "If stuck, look for regions where most cells are already blocked by placed queens.",
+      condition: () => queensCount >= 3
+    },
+    {
+      explanation: "Check where your placed queens intersect - the blocking patterns create forced moves.",
+      condition: () => queensCount >= 4
+    }
+  ]
+
+  // Find appropriate tip for current game state
+  const applicableTips = tips.filter(t => t.condition())
+  const tip = applicableTips[queensCount % applicableTips.length] || tips[0]
+
+  return {
+    type: 'general_tip',
+    position: null,
+    explanation: tip.explanation,
+    highlightCells: [],
+    highlightQueens: [],
+    canApply: false
+  }
+}
+
+// Find the best region to focus on (fewest valid cells)
+function findBestRegionHint(
+  cellInfo: CellInfo[][],
+  queens: Queen[],
+  regions: number[][]
+): Hint | null {
+  let bestRegion = -1
+  let bestCount = Infinity
+  let bestCells: Position[] = []
+
+  for (let regionId = 0; regionId < GRID_SIZE; regionId++) {
+    // Skip regions that already have a queen
+    if (queens.some(q => regions[q.position.row][q.position.col] === regionId)) {
+      continue
+    }
+
+    const regionCells = getCellsInRegion(regions, regionId)
+    const validCells = regionCells.filter(cell => {
+      const info = cellInfo[cell.row][cell.col]
+      return !info.hasQueen && !info.isBlocked
+    })
+
+    // Find region with 2-5 valid cells (good early game target)
+    if (validCells.length >= 2 && validCells.length <= 5 && validCells.length < bestCount) {
+      bestRegion = regionId
+      bestCount = validCells.length
+      bestCells = validCells
+    }
+  }
+
+  if (bestRegion !== -1 && bestCells.length > 0) {
+    return {
+      type: 'best_region',
+      position: bestCells[0],
+      explanation: `The ${getRegionName(bestRegion)} region has only ${bestCount} possible cells for its queen. Try focusing here!`,
+      highlightCells: bestCells,
+      highlightQueens: [],
+      canApply: false
+    }
+  }
+
+  return null
 }
 
 export function analyzeForHint(
@@ -56,7 +146,9 @@ export function analyzeForHint(
   manualXs: Position[],
   autoXs: AutoPlacedX[],
   regions: number[][]
-): Hint | null {
+): Hint {
+  debug.log('hints', `Analyzing for hint with ${queens.length} queens placed`)
+
   // Build cell info grid
   const cellInfo: CellInfo[][] = []
   const queenPositions = new Set(queens.map(q => `${q.position.row},${q.position.col}`))
@@ -82,7 +174,8 @@ export function analyzeForHint(
   // 1. Check for conflicts first
   const validation = validatePlacement(queens, regions)
   if (!validation.isValid) {
-    // Find the first conflict to report
+    debug.log('hints', 'Found conflict in placement')
+
     if (validation.rowConflicts.size > 0) {
       const entry = Array.from(validation.rowConflicts.entries())[0]
       if (entry) {
@@ -154,9 +247,8 @@ export function analyzeForHint(
     }
   }
 
-  // 2. Check for naked singles in rows (row has only one valid empty cell)
+  // 2. Check for naked singles in rows
   for (let row = 0; row < GRID_SIZE; row++) {
-    // Skip if row already has a queen
     if (queens.some(q => q.position.row === row)) continue
 
     const validCells: Position[] = []
@@ -171,10 +263,11 @@ export function analyzeForHint(
     }
 
     if (validCells.length === 1) {
+      debug.log('hints', `Found naked single in row ${row + 1}`)
       return {
         type: 'naked_single_row',
         position: validCells[0],
-        explanation: `Row ${row + 1} has only one valid cell remaining. All other cells are blocked by existing queens.`,
+        explanation: `Row ${row + 1} has only one valid cell remaining. Place a queen here!`,
         highlightCells: rowCells,
         highlightQueens: [],
         canApply: true
@@ -184,7 +277,6 @@ export function analyzeForHint(
 
   // 3. Check for naked singles in columns
   for (let col = 0; col < GRID_SIZE; col++) {
-    // Skip if column already has a queen
     if (queens.some(q => q.position.col === col)) continue
 
     const validCells: Position[] = []
@@ -199,10 +291,11 @@ export function analyzeForHint(
     }
 
     if (validCells.length === 1) {
+      debug.log('hints', `Found naked single in column ${col + 1}`)
       return {
         type: 'naked_single_col',
         position: validCells[0],
-        explanation: `Column ${col + 1} has only one valid cell remaining. All other cells are blocked by existing queens.`,
+        explanation: `Column ${col + 1} has only one valid cell remaining. Place a queen here!`,
         highlightCells: colCells,
         highlightQueens: [],
         canApply: true
@@ -212,7 +305,6 @@ export function analyzeForHint(
 
   // 4. Check for naked singles in regions
   for (let regionId = 0; regionId < GRID_SIZE; regionId++) {
-    // Skip if region already has a queen
     if (queens.some(q => regions[q.position.row][q.position.col] === regionId)) continue
 
     const regionCells = getCellsInRegion(regions, regionId)
@@ -226,10 +318,11 @@ export function analyzeForHint(
     }
 
     if (validCells.length === 1) {
+      debug.log('hints', `Found naked single in ${getRegionName(regionId)} region`)
       return {
         type: 'naked_single_region',
         position: validCells[0],
-        explanation: `The ${getRegionName(regionId)} region has only one valid cell remaining. All other cells are blocked.`,
+        explanation: `The ${getRegionName(regionId)} region has only one valid cell remaining. Place a queen here!`,
         highlightCells: regionCells,
         highlightQueens: [],
         canApply: true
@@ -237,26 +330,22 @@ export function analyzeForHint(
     }
   }
 
-  // 5. Find cells where elimination narrows it down
-  // Look for a cell that's the only valid cell in its row AND column OR region
+  // 5. Look for elimination opportunities (relaxed criteria)
   for (let row = 0; row < GRID_SIZE; row++) {
     for (let col = 0; col < GRID_SIZE; col++) {
       const info = cellInfo[row][col]
       if (info.hasQueen || info.isBlocked) continue
 
-      // Check if this is the only valid cell that can satisfy multiple constraints
       const rowHasQueen = queens.some(q => q.position.row === row)
       const colHasQueen = queens.some(q => q.position.col === col)
       const regionHasQueen = queens.some(q => regions[q.position.row][q.position.col] === info.region)
 
-      // Count how many constraints this cell satisfies
       let constraints = 0
       if (!rowHasQueen) constraints++
       if (!colHasQueen) constraints++
       if (!regionHasQueen) constraints++
 
       if (constraints >= 2) {
-        // This cell could satisfy multiple constraints, check if it's forced
         let validInRow = 0
         let validInCol = 0
 
@@ -267,19 +356,15 @@ export function analyzeForHint(
           if (!cellInfo[r][col].hasQueen && !cellInfo[r][col].isBlocked) validInCol++
         }
 
-        if (validInRow <= 2 || validInCol <= 2) {
-          const blockingQueens = queens.filter(q => {
-            const dr = Math.abs(q.position.row - row)
-            const dc = Math.abs(q.position.col - col)
-            return dr <= 1 && dc <= 1 && (dr !== 0 || dc !== 0)
-          })
-
+        // Relaxed from <= 2 to <= 3
+        if (validInRow <= 3 || validInCol <= 3) {
+          debug.log('hints', `Found elimination opportunity at (${row}, ${col})`)
           return {
             type: 'elimination',
             position: { row, col },
-            explanation: `This cell is one of very few options. Row ${row + 1} has ${validInRow} valid cell(s), Column ${col + 1} has ${validInCol} valid cell(s).`,
+            explanation: `This cell at row ${row + 1}, column ${col + 1} is a strong candidate. Row has ${validInRow} options, column has ${validInCol} options.`,
             highlightCells: [{ row, col }],
-            highlightQueens: blockingQueens.map(q => q.id),
+            highlightQueens: [],
             canApply: true
           }
         }
@@ -287,6 +372,14 @@ export function analyzeForHint(
     }
   }
 
-  // No obvious hint found
-  return null
+  // 6. Best region hint for early game
+  const bestRegionHint = findBestRegionHint(cellInfo, queens, regions)
+  if (bestRegionHint) {
+    debug.log('hints', 'Providing best region hint')
+    return bestRegionHint
+  }
+
+  // 7. Always return a general tip as fallback
+  debug.log('hints', 'No specific hint found, returning general tip')
+  return getGeneralTip(queens.length)
 }

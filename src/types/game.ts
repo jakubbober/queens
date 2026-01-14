@@ -54,7 +54,14 @@ export const GRID_SIZE = 9
 export const NUM_REGIONS = 9
 
 // Hint types
-export type HintType = 'conflict' | 'naked_single_row' | 'naked_single_col' | 'naked_single_region' | 'elimination'
+export type HintType =
+  | 'conflict'
+  | 'naked_single_row'
+  | 'naked_single_col'
+  | 'naked_single_region'
+  | 'elimination'
+  | 'best_region'
+  | 'general_tip'
 
 export interface Hint {
   type: HintType
