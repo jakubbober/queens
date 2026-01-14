@@ -12,15 +12,38 @@ export function HintDisplay() {
   const getHintIcon = () => {
     switch (currentHint.type) {
       case 'conflict':
-        return '⚠️'
+        return '!'
       case 'naked_single_row':
       case 'naked_single_col':
       case 'naked_single_region':
-        return '💡'
+        return '*'
       case 'elimination':
-        return '🔍'
+        return '?'
+      case 'best_region':
+        return '>'
+      case 'general_tip':
+        return 'i'
       default:
-        return '💡'
+        return '*'
+    }
+  }
+
+  const getHintTitle = () => {
+    switch (currentHint.type) {
+      case 'conflict':
+        return 'Conflict Found'
+      case 'naked_single_row':
+      case 'naked_single_col':
+      case 'naked_single_region':
+        return 'Forced Move'
+      case 'elimination':
+        return 'Strong Candidate'
+      case 'best_region':
+        return 'Focus Area'
+      case 'general_tip':
+        return 'Strategy Tip'
+      default:
+        return 'Hint'
     }
   }
 
@@ -34,9 +57,7 @@ export function HintDisplay() {
       >
         <div className="hint-header">
           <span className="hint-icon">{getHintIcon()}</span>
-          <span className="hint-title">
-            {currentHint.type === 'conflict' ? 'Conflict Found' : 'Hint'}
-          </span>
+          <span className="hint-title">{getHintTitle()}</span>
         </div>
         <p className="hint-explanation">{currentHint.explanation}</p>
         <div className="hint-actions">
