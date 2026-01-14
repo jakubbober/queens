@@ -57,7 +57,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
   },
 
   cycleCell: (row: number, col: number) => {
-    const { queens, manualXs, puzzle, settings, isDragging } = get()
+    const { queens, manualXs, puzzle, isDragging } = get()
     if (!puzzle || get().isWon) return
 
     // Start timer on first interaction
@@ -76,23 +76,19 @@ export const useGameStore = create<GameStore>((set, get) => ({
       return
     }
 
-    // Cycle: Empty -> X -> Queen -> Empty
+    // Direct queen placement: Click = toggle queen
     if (hasQueen) {
+      // Click on queen -> remove it
       get().removeQueen(row, col)
-    } else if (hasManualX) {
-      get().saveSnapshot()
-      get().removeManualX(row, col)
-      get().placeQueen(row, col)
     } else {
-      // Check if cell has auto-X
-      const hasAutoX = get().autoXs.some(
-        x => x.position.row === row && x.position.col === col
-      )
-      if (hasAutoX && settings.autoX) {
-        // Can't place on auto-X'd cell
-        return
+      // Click on empty/X cell -> place queen
+      // First remove any manual X at this position
+      if (hasManualX) {
+        get().saveSnapshot()
+        get().removeManualX(row, col)
       }
-      get().placeManualX(row, col)
+      // Place queen (queens can override auto-X cells)
+      get().placeQueen(row, col)
     }
   },
 
@@ -175,6 +171,34 @@ export const useGameStore = create<GameStore>((set, get) => ({
     set({
       manualXs: manualXs.filter(x => x.row !== row || x.col !== col)
     })
+  },
+
+  toggleManualX: (row: number, col: number) => {
+    const { queens, manualXs } = get()
+    if (get().isWon) return
+
+    // Start timer if needed
+    if (!get().timer.isRunning) {
+      get().startTimer()
+    }
+
+    // Can't place X on a queen
+    if (queens.some(q => q.position.row === row && q.position.col === col)) {
+      return
+    }
+
+    const hasManualX = manualXs.some(x => x.row === row && x.col === col)
+
+    get().saveSnapshot()
+
+    if (hasManualX) {
+      get().removeManualX(row, col)
+    } else {
+      // Place manual X (can place over auto-X to make it visible/permanent)
+      set({
+        manualXs: [...manualXs, { row, col }]
+      })
+    }
   },
 
   startDrag: () => {
