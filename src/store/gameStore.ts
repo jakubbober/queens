@@ -76,19 +76,18 @@ export const useGameStore = create<GameStore>((set, get) => ({
       return
     }
 
-    // Direct queen placement: Click = toggle queen
+    // Cycle: Empty -> X -> Queen -> Empty
     if (hasQueen) {
-      // Click on queen -> remove it
+      // Queen -> Empty
       get().removeQueen(row, col)
-    } else {
-      // Click on empty/X cell -> place queen
-      // First remove any manual X at this position
-      if (hasManualX) {
-        get().saveSnapshot()
-        get().removeManualX(row, col)
-      }
-      // Place queen (queens can override auto-X cells)
+    } else if (hasManualX) {
+      // X -> Queen
+      get().saveSnapshot()
+      get().removeManualX(row, col)
       get().placeQueen(row, col)
+    } else {
+      // Empty -> X (place manual X)
+      get().placeManualX(row, col)
     }
   },
 
