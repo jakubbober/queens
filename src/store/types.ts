@@ -49,6 +49,7 @@ export interface GameActions {
   removeQueen: (row: number, col: number) => void
   placeManualX: (row: number, col: number) => void
   removeManualX: (row: number, col: number) => void
+  toggleManualX: (row: number, col: number) => void
 
   // Drag to mark (kept for compatibility)
   startDrag: () => void
