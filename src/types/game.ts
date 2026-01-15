@@ -53,6 +53,8 @@ export interface HistoryState {
 export const GRID_SIZE = 9
 export const NUM_REGIONS = 9
 
+export type Difficulty = 'easy' | 'medium' | 'hard'
+
 // Hint types
 export type HintType =
   | 'conflict'

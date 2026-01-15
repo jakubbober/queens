@@ -6,7 +6,8 @@ import {
   TimerState,
   HistoryState,
   Puzzle,
-  Hint
+  Hint,
+  Difficulty
 } from '../types/game'
 
 export interface GameState {
@@ -36,12 +37,18 @@ export interface GameState {
 
   // Drag state (kept for compatibility but not used by store)
   isDragging: boolean
+
+  // Puzzle settings
+  difficulty: Difficulty
+  isDailyPuzzle: boolean
 }
 
 export interface GameActions {
   // Initialization
   initGame: () => void
   newGame: () => void
+  newRandomPuzzle: () => void
+  setDifficulty: (difficulty: Difficulty) => void
 
   // Cell interactions
   cycleCell: (row: number, col: number) => void
