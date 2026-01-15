@@ -18,6 +18,7 @@ export function useDragToMark(boardRef: React.RefObject<HTMLDivElement | null>) 
   const dragModeRef = useRef<DragMode>(null)
   const processedCellsRef = useRef<Set<string>>(new Set())
   const hasDraggedRef = useRef(false)
+  const startCellRef = useRef<Position | null>(null)
 
   const getCellFromPoint = useCallback((clientX: number, clientY: number): Position | null => {
     const board = boardRef.current
@@ -59,7 +60,6 @@ export function useDragToMark(boardRef: React.RefObject<HTMLDivElement | null>) 
     if (hasQueen(row, col) || hasAutoX(row, col)) return
 
     processedCellsRef.current.add(key)
-    hasDraggedRef.current = true
 
     if (dragModeRef.current === 'place') {
       if (!hasManualX(row, col)) {
@@ -79,46 +79,57 @@ export function useDragToMark(boardRef: React.RefObject<HTMLDivElement | null>) 
     // Don't start drag on queens
     if (hasQueen(cell.row, cell.col)) return
 
+    // Auto-X cell - can't interact via drag
+    if (hasAutoX(cell.row, cell.col)) return
+
     // Start timer on first interaction
     if (!timerRunning) {
       startTimer()
     }
 
-    // Save snapshot for undo
-    saveSnapshot()
-
-    // Determine drag mode based on first cell
-    if (hasManualX(cell.row, cell.col)) {
-      dragModeRef.current = 'erase'
-    } else if (!hasAutoX(cell.row, cell.col)) {
-      dragModeRef.current = 'place'
-    } else {
-      // Auto-X cell - can't interact
-      return
-    }
-
+    // Just track the start cell - don't place X yet
+    // X marks are only placed when user actually drags to a different cell
+    startCellRef.current = cell
     setIsDragging(true)
     processedCellsRef.current = new Set()
     hasDraggedRef.current = false
 
-    // Process the first cell
-    processCell(cell.row, cell.col)
-  }, [getCellFromPoint, hasQueen, hasManualX, hasAutoX, saveSnapshot, processCell, timerRunning, startTimer])
+    // Determine drag mode based on first cell, but don't act yet
+    if (hasManualX(cell.row, cell.col)) {
+      dragModeRef.current = 'erase'
+    } else {
+      dragModeRef.current = 'place'
+    }
+  }, [getCellFromPoint, hasQueen, hasManualX, hasAutoX, timerRunning, startTimer])
 
   const handleMouseMove = useCallback((e: React.MouseEvent) => {
-    if (!isDragging) return
+    if (!isDragging || !startCellRef.current) return
 
     const cell = getCellFromPoint(e.clientX, e.clientY)
-    if (cell) {
+    if (!cell) return
+
+    const start = startCellRef.current
+
+    // Check if we've moved to a different cell - this indicates a drag
+    if (cell.row !== start.row || cell.col !== start.col) {
+      if (!hasDraggedRef.current) {
+        // First move to a different cell - now we know it's a drag
+        // Save snapshot for undo and process the start cell
+        saveSnapshot()
+        processCell(start.row, start.col)
+        hasDraggedRef.current = true
+      }
+      // Process the current cell
       processCell(cell.row, cell.col)
     }
-  }, [isDragging, getCellFromPoint, processCell])
+  }, [isDragging, getCellFromPoint, processCell, saveSnapshot])
 
   const handleMouseUp = useCallback(() => {
     if (isDragging) {
       setIsDragging(false)
       dragModeRef.current = null
       processedCellsRef.current = new Set()
+      startCellRef.current = null
     }
   }, [isDragging])
 
@@ -129,38 +140,47 @@ export function useDragToMark(boardRef: React.RefObject<HTMLDivElement | null>) 
     if (!cell) return
 
     if (hasQueen(cell.row, cell.col)) return
+    if (hasAutoX(cell.row, cell.col)) return
 
     if (!timerRunning) {
       startTimer()
     }
 
-    saveSnapshot()
-
-    if (hasManualX(cell.row, cell.col)) {
-      dragModeRef.current = 'erase'
-    } else if (!hasAutoX(cell.row, cell.col)) {
-      dragModeRef.current = 'place'
-    } else {
-      return
-    }
-
+    // Just track the start cell - don't place X yet
+    startCellRef.current = cell
     setIsDragging(true)
     processedCellsRef.current = new Set()
     hasDraggedRef.current = false
 
-    processCell(cell.row, cell.col)
-  }, [getCellFromPoint, hasQueen, hasManualX, hasAutoX, saveSnapshot, processCell, timerRunning, startTimer])
+    // Determine drag mode based on first cell, but don't act yet
+    if (hasManualX(cell.row, cell.col)) {
+      dragModeRef.current = 'erase'
+    } else {
+      dragModeRef.current = 'place'
+    }
+  }, [getCellFromPoint, hasQueen, hasManualX, hasAutoX, timerRunning, startTimer])
 
   const handleTouchMove = useCallback((e: React.TouchEvent) => {
-    if (!isDragging) return
+    if (!isDragging || !startCellRef.current) return
     e.preventDefault()
 
     const touch = e.touches[0]
     const cell = getCellFromPoint(touch.clientX, touch.clientY)
-    if (cell) {
+    if (!cell) return
+
+    const start = startCellRef.current
+
+    // Check if we've moved to a different cell - this indicates a drag
+    if (cell.row !== start.row || cell.col !== start.col) {
+      if (!hasDraggedRef.current) {
+        // First move to a different cell - now we know it's a drag
+        saveSnapshot()
+        processCell(start.row, start.col)
+        hasDraggedRef.current = true
+      }
       processCell(cell.row, cell.col)
     }
-  }, [isDragging, getCellFromPoint, processCell])
+  }, [isDragging, getCellFromPoint, processCell, saveSnapshot])
 
   const handleTouchEnd = useCallback(() => {
     handleMouseUp()

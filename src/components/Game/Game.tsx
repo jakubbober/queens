@@ -7,17 +7,24 @@ import { WinModal } from '../UI/WinModal'
 import { HintDisplay } from '../UI/HintDisplay'
 import { DebugPanel } from '../UI/DebugPanel'
 import { useGameInit, useTimer, useKeyboardShortcuts } from '../../hooks/useGameStore'
+import { useGameStore } from '../../store/gameStore'
 
 export function Game() {
   useGameInit()
   useTimer()
   useKeyboardShortcuts()
 
+  const isDailyPuzzle = useGameStore(state => state.isDailyPuzzle)
+  const difficulty = useGameStore(state => state.difficulty)
+
+  const difficultyLabel = difficulty.charAt(0).toUpperCase() + difficulty.slice(1)
+  const puzzleType = isDailyPuzzle ? 'Daily Puzzle' : `${difficultyLabel} Puzzle`
+
   return (
     <div className="game-container">
       <header className="game-header">
         <h1>Queens</h1>
-        <p className="puzzle-info">Daily Puzzle</p>
+        <p className="puzzle-info">{puzzleType}</p>
         <Timer />
       </header>
 
