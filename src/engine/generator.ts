@@ -1,10 +1,10 @@
-import { Puzzle, Position, GRID_SIZE, NUM_REGIONS } from '../types/game'
+import { Puzzle, Position, GRID_SIZE, NUM_REGIONS, Difficulty } from '../types/game'
 import { findSolution, hasUniqueSolution } from './solver'
 import { areAllRegionsConnected } from './regions'
 import { getRandomPuzzleFromBank } from './puzzleBank'
 import { debug } from '../store/debugStore'
 
-const MAX_GENERATION_ATTEMPTS = 200
+const MAX_GENERATION_ATTEMPTS = 100
 
 // Mulberry32 seeded PRNG - fast and good quality
 function createSeededRandom(seed: number): () => number {
@@ -76,48 +76,111 @@ function generateQueenPlacement(random: () => number): Position[] | null {
   return backtrack(0) ? solution : null
 }
 
-// Calculate how "blocked" each cell is by the solution
-function calculateBlockScores(solution: Position[]): number[][] {
-  const scores: number[][] = Array(GRID_SIZE).fill(null).map(() => Array(GRID_SIZE).fill(0))
-  const queenSet = new Set(solution.map(q => `${q.row},${q.col}`))
+// Check if assigning a cell to a region would be "safe" (not create multiple solutions)
+// A cell is safe for a region if placing a queen there would be invalid when the solver reaches it
+function isCellSafeForRegion(cell: Position, solution: Position[], regionIdx: number): boolean {
+  const queen = solution[regionIdx]
 
-  for (let r = 0; r < GRID_SIZE; r++) {
-    for (let c = 0; c < GRID_SIZE; c++) {
-      if (queenSet.has(`${r},${c}`)) {
-        scores[r][c] = -1 // Queen cell, special marker
-        continue
-      }
+  // If this is the queen position itself, it must belong to this region
+  if (cell.row === queen.row && cell.col === queen.col) return true
 
-      // +1 if same row as any queen
-      if (solution.some(q => q.row === r)) scores[r][c]++
-      // +1 if same column as any queen
-      if (solution.some(q => q.col === c)) scores[r][c]++
-      // +3 if adjacent to any queen (strongly prefer these)
-      for (const q of solution) {
-        if (Math.abs(q.row - r) <= 1 && Math.abs(q.col - c) <= 1) {
-          scores[r][c] += 3
-          break
-        }
-      }
+  // If region's queen is in an earlier row, the region will already have a queen
+  // when the solver reaches this cell's row (solver goes row by row), so this cell
+  // can't be selected due to the one-queen-per-region constraint - it's safe
+  if (queen.row < cell.row) return true
+
+  // For cells in the same row or earlier rows than the region's queen,
+  // they're only safe if blocked by queens that will be placed before this cell's row
+  for (let i = 0; i < solution.length; i++) {
+    if (i === regionIdx) continue
+    const otherQueen = solution[i]
+
+    // Only queens in earlier rows will be placed before this cell is considered
+    if (otherQueen.row >= cell.row) continue
+
+    // Same column as a queen in an earlier row
+    if (otherQueen.col === cell.col) return true
+
+    // Adjacent to a queen in an earlier row
+    if (Math.abs(otherQueen.row - cell.row) <= 1 && Math.abs(otherQueen.col - cell.col) <= 1) {
+      return true
     }
   }
 
-  return scores
+  return false
 }
 
-// Generate regions preferring blocked cells (constraint-aware approach)
-function generateConstraintAwareRegions(solution: Position[], random: () => number): number[][] | null {
-  const regions: number[][] = Array(GRID_SIZE).fill(null).map(() => Array(GRID_SIZE).fill(-1))
-  const blockScores = calculateBlockScores(solution)
+// Get 4-directional neighbors
+function getNeighbors(row: number, col: number): Position[] {
+  const neighbors: Position[] = []
+  const directions = [[-1, 0], [1, 0], [0, -1], [0, 1]]
+  for (const [dr, dc] of directions) {
+    const nr = row + dr
+    const nc = col + dc
+    if (nr >= 0 && nr < GRID_SIZE && nc >= 0 && nc < GRID_SIZE) {
+      neighbors.push({ row: nr, col: nc })
+    }
+  }
+  return neighbors
+}
 
-  // Each queen becomes the seed of its region
+// Get difficulty parameters
+function getDifficultyParams(difficulty: Difficulty): {
+  competitorAggressiveness: number
+  regionRegularity: number
+} {
+  switch (difficulty) {
+    case 'easy':
+      return { competitorAggressiveness: 0.9, regionRegularity: 0.7 }
+    case 'medium':
+      return { competitorAggressiveness: 0.7, regionRegularity: 0.5 }
+    case 'hard':
+      return { competitorAggressiveness: 0.5, regionRegularity: 0.3 }
+  }
+}
+
+// Generate regions ensuring uniqueness by only assigning cells to "safe" regions
+// Key insight: A cell is safe for a region if placing a queen there would be invalid
+function generateUniquenessEnforcingRegions(
+  solution: Position[],
+  difficulty: Difficulty,
+  random: () => number
+): number[][] | null {
+  const regions: number[][] = Array(GRID_SIZE).fill(null).map(() => Array(GRID_SIZE).fill(-1))
+  const regionSizes: number[] = Array(NUM_REGIONS).fill(0)
+  const params = getDifficultyParams(difficulty)
+
+  // Step 1: Pre-compute which regions each cell is safe for
+  const safeFor: Map<string, number[]> = new Map()
+
+  for (let r = 0; r < GRID_SIZE; r++) {
+    for (let c = 0; c < GRID_SIZE; c++) {
+      const cell = { row: r, col: c }
+      const safeRegions: number[] = []
+
+      for (let regionId = 0; regionId < NUM_REGIONS; regionId++) {
+        // Check if this is the queen position
+        if (solution[regionId].row === r && solution[regionId].col === c) {
+          safeRegions.push(regionId)
+        } else if (isCellSafeForRegion(cell, solution, regionId)) {
+          safeRegions.push(regionId)
+        }
+      }
+
+      safeFor.set(`${r},${c}`, safeRegions)
+    }
+  }
+
+  // Step 2: Seed queens as region centers
   for (let i = 0; i < solution.length; i++) {
     const { row, col } = solution[i]
     regions[row][col] = i
+    regionSizes[i] = 1
   }
 
-  // Priority queue entries: { row, col, regionId, priority }
-  // Higher priority = should be assigned first
+  // Step 3: Grow regions, only assigning cells to safe regions
+  const targetSize = Math.ceil((GRID_SIZE * GRID_SIZE) / NUM_REGIONS)
+
   interface QueueEntry {
     row: number
     col: number
@@ -125,102 +188,128 @@ function generateConstraintAwareRegions(solution: Position[], random: () => numb
     priority: number
   }
 
-  const queue: QueueEntry[] = []
-  const inQueue = new Set<string>()
+  const rebuildQueue = (): QueueEntry[] => {
+    const queue: QueueEntry[] = []
+    for (let r = 0; r < GRID_SIZE; r++) {
+      for (let c = 0; c < GRID_SIZE; c++) {
+        if (regions[r][c] !== -1) continue
 
-  const getNeighbors = (row: number, col: number): Position[] => {
-    const neighbors: Position[] = []
-    const directions = [[-1, 0], [1, 0], [0, -1], [0, 1]]
-    for (const [dr, dc] of directions) {
-      const nr = row + dr
-      const nc = col + dc
-      if (nr >= 0 && nr < GRID_SIZE && nc >= 0 && nc < GRID_SIZE) {
-        neighbors.push({ row: nr, col: nc })
-      }
-    }
-    return neighbors
-  }
+        const cellSafeRegions = safeFor.get(`${r},${c}`) || []
 
-  // Add initial neighbors of queens to queue
-  for (let i = 0; i < solution.length; i++) {
-    const { row, col } = solution[i]
-    for (const neighbor of getNeighbors(row, col)) {
-      if (regions[neighbor.row][neighbor.col] === -1) {
-        const key = `${neighbor.row},${neighbor.col}`
-        if (!inQueue.has(key)) {
-          // Priority: block score + small random factor for variety
-          const priority = blockScores[neighbor.row][neighbor.col] + random() * 0.5
-          queue.push({ row: neighbor.row, col: neighbor.col, regionId: i, priority })
-          inQueue.add(key)
+        for (const neighbor of getNeighbors(r, c)) {
+          if (regions[neighbor.row][neighbor.col] !== -1) {
+            const regionId = regions[neighbor.row][neighbor.col]
+
+            // Only add if cell is safe for this region
+            if (cellSafeRegions.includes(regionId)) {
+              const queen = solution[regionId]
+              const dist = Math.abs(r - queen.row) + Math.abs(c - queen.col)
+              // Higher priority for regions whose queens are in earlier rows
+              // This helps ensure cells are assigned to regions that will have queens
+              // placed before the solver reaches this cell's row
+              const earlyRowBonus = queen.row < r ? 5 : 0
+              queue.push({
+                row: r,
+                col: c,
+                regionId,
+                priority: (10 - dist) + earlyRowBonus + random() * params.regionRegularity * 3
+              })
+            }
+          }
         }
       }
     }
+    return queue
   }
 
-  // Track region sizes for balance
-  const regionSizes = Array(NUM_REGIONS).fill(1)
-  const targetSize = Math.ceil((GRID_SIZE * GRID_SIZE) / NUM_REGIONS)
+  // Grow regions iteratively
+  let iterations = 0
+  const maxIterations = GRID_SIZE * GRID_SIZE * 3
 
-  // Process queue (sort by priority descending, prefer smaller regions)
-  while (queue.length > 0) {
-    // Sort: higher priority first, prefer smaller regions
+  while (iterations < maxIterations) {
+    iterations++
+    const queue = rebuildQueue()
+
+    if (queue.length === 0) break
+
+    // Sort by priority, prefer smaller regions
     queue.sort((a, b) => {
-      const sizeFactorA = regionSizes[a.regionId] < targetSize ? 1 : 0
-      const sizeFactorB = regionSizes[b.regionId] < targetSize ? 1 : 0
-      return (b.priority + sizeFactorB * 2) - (a.priority + sizeFactorA * 2)
+      const sizeFactorA = regionSizes[a.regionId] < targetSize ? 5 : 0
+      const sizeFactorB = regionSizes[b.regionId] < targetSize ? 5 : 0
+      return (b.priority + sizeFactorB) - (a.priority + sizeFactorA)
     })
 
-    const entry = queue.shift()!
-    const { row, col, regionId } = entry
+    const best = queue[0]
 
-    // Skip if already assigned
-    if (regions[row][col] !== -1) continue
+    if (regions[best.row][best.col] !== -1) continue
 
-    // Check if this cell is adjacent to its target region
+    // Verify still adjacent
     let adjacentToRegion = false
-    for (const neighbor of getNeighbors(row, col)) {
-      if (regions[neighbor.row][neighbor.col] === regionId) {
+    for (const neighbor of getNeighbors(best.row, best.col)) {
+      if (regions[neighbor.row][neighbor.col] === best.regionId) {
         adjacentToRegion = true
         break
       }
     }
-
     if (!adjacentToRegion) continue
 
-    // Assign to region
-    regions[row][col] = regionId
-    regionSizes[regionId]++
-
-    // Add unassigned neighbors to queue
-    for (const neighbor of getNeighbors(row, col)) {
-      if (regions[neighbor.row][neighbor.col] === -1) {
-        const priority = blockScores[neighbor.row][neighbor.col] + random() * 0.5
-        queue.push({ row: neighbor.row, col: neighbor.col, regionId, priority })
-        // Don't mark as inQueue - allow multiple regions to compete for cells
-      }
-    }
+    regions[best.row][best.col] = best.regionId
+    regionSizes[best.regionId]++
   }
 
-  // Handle remaining unassigned cells (assign to nearest region)
+  // Check for unassigned cells - these would break uniqueness
+  // If we have unassigned cells, this placement won't work
   for (let r = 0; r < GRID_SIZE; r++) {
     for (let c = 0; c < GRID_SIZE; c++) {
       if (regions[r][c] === -1) {
-        const neighbors = getNeighbors(r, c)
-        for (const neighbor of neighbors) {
+        // Try to assign to ANY safe adjacent region
+        const cellSafeRegions = safeFor.get(`${r},${c}`) || []
+        let assigned = false
+
+        for (const neighbor of getNeighbors(r, c)) {
           if (regions[neighbor.row][neighbor.col] !== -1) {
-            regions[r][c] = regions[neighbor.row][neighbor.col]
-            break
+            const regionId = regions[neighbor.row][neighbor.col]
+            if (cellSafeRegions.includes(regionId)) {
+              regions[r][c] = regionId
+              regionSizes[regionId]++
+              assigned = true
+              break
+            }
+          }
+        }
+
+        // If still not assigned, prefer regions whose queens are in earlier rows
+        // This maximizes the chance that the region already has a queen when solver reaches this cell
+        if (!assigned) {
+          let bestRegion = -1
+          let bestQueenRow = GRID_SIZE + 1
+
+          for (const neighbor of getNeighbors(r, c)) {
+            if (regions[neighbor.row][neighbor.col] !== -1) {
+              const regionId = regions[neighbor.row][neighbor.col]
+              const queenRow = solution[regionId].row
+              // Prefer regions with queens in earlier rows (closer to row 0)
+              // but ideally before this cell's row
+              if (queenRow < bestQueenRow) {
+                bestRegion = regionId
+                bestQueenRow = queenRow
+              }
+            }
+          }
+
+          if (bestRegion !== -1) {
+            regions[r][c] = bestRegion
+            regionSizes[bestRegion]++
           }
         }
       }
     }
   }
 
-  // Final pass for any isolated cells
+  // Final pass for any remaining isolated cells
   for (let r = 0; r < GRID_SIZE; r++) {
     for (let c = 0; c < GRID_SIZE; c++) {
       if (regions[r][c] === -1) {
-        // Find nearest assigned cell
         for (let dist = 1; dist < GRID_SIZE && regions[r][c] === -1; dist++) {
           for (let dr = -dist; dr <= dist; dr++) {
             for (let dc = -dist; dc <= dist; dc++) {
@@ -229,6 +318,7 @@ function generateConstraintAwareRegions(solution: Position[], random: () => numb
               if (nr >= 0 && nr < GRID_SIZE && nc >= 0 && nc < GRID_SIZE) {
                 if (regions[nr][nc] !== -1) {
                   regions[r][c] = regions[nr][nc]
+                  regionSizes[regions[r][c]]++
                   break
                 }
               }
@@ -243,16 +333,15 @@ function generateConstraintAwareRegions(solution: Position[], random: () => numb
   return regions
 }
 
-// Main puzzle generation function
-export function generatePuzzle(seed?: number): Puzzle {
+// Main puzzle generation function with difficulty support
+export function generatePuzzle(seed?: number, difficulty: Difficulty = 'medium'): Puzzle {
   const actualSeed = seed ?? Math.floor(Math.random() * 1000000)
   const random = createSeededRandom(actualSeed)
 
-  debug.log('generator', `Starting puzzle generation with seed ${actualSeed}`)
+  debug.log('generator', `Starting puzzle generation with seed ${actualSeed}, difficulty: ${difficulty}`)
 
   const failReasons = { placement: 0, regions: 0, connectivity: 0, noSolution: 0, multipleSolutions: 0 }
 
-  // Try solution-first generation with constraint-aware regions
   for (let attempt = 0; attempt < MAX_GENERATION_ATTEMPTS; attempt++) {
     // Generate valid queen placement first
     const solution = generateQueenPlacement(random)
@@ -261,8 +350,8 @@ export function generatePuzzle(seed?: number): Puzzle {
       continue
     }
 
-    // Generate regions using constraint-aware algorithm
-    const regions = generateConstraintAwareRegions(solution, random)
+    // Generate regions using uniqueness-enforcing algorithm
+    const regions = generateUniquenessEnforcingRegions(solution, difficulty, random)
     if (!regions) {
       failReasons.regions++
       continue
@@ -283,10 +372,15 @@ export function generatePuzzle(seed?: number): Puzzle {
 
     // Check uniqueness
     if (hasUniqueSolution(regions)) {
-      debug.log('generator', `Success! Generated unique puzzle on attempt ${attempt + 1}`, { seed: actualSeed })
+      debug.log('generator', `Success! Generated unique puzzle on attempt ${attempt + 1}`, { seed: actualSeed, difficulty })
       return { regions, solution: validSolution }
     } else {
       failReasons.multipleSolutions++
+      // Debug: log first failure details
+      if (failReasons.multipleSolutions === 1) {
+        debug.log('generator', 'First multipleSolutions failure - queens:', solution)
+        debug.log('generator', 'Solver found different solution:', validSolution)
+      }
     }
   }
 
@@ -304,15 +398,15 @@ export function generatePuzzle(seed?: number): Puzzle {
 }
 
 // Generate a daily puzzle (same puzzle for everyone on the same day)
-export function generateDailyPuzzle(): Puzzle {
+export function generateDailyPuzzle(difficulty: Difficulty = 'medium'): Puzzle {
   const seed = getDailySeed()
   debug.log('generator', `Generating daily puzzle for seed ${seed}`)
-  return generatePuzzle(seed)
+  return generatePuzzle(seed, difficulty)
 }
 
 // Generate a random puzzle (different each time)
-export function generateRandomPuzzle(): Puzzle {
+export function generateRandomPuzzle(difficulty: Difficulty = 'medium'): Puzzle {
   const seed = Date.now() + Math.floor(Math.random() * 10000)
   debug.log('generator', `Generating random puzzle with seed ${seed}`)
-  return generatePuzzle(seed)
+  return generatePuzzle(seed, difficulty)
 }

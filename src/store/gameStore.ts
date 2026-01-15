@@ -1,7 +1,7 @@
 import { create } from 'zustand'
 import { GameStore, GameState } from './types'
-import { Queen, AutoPlacedX, GameSnapshot } from '../types/game'
-import { generatePuzzle } from '../engine/generator'
+import { Queen, AutoPlacedX, GameSnapshot, Difficulty } from '../types/game'
+import { generateDailyPuzzle, generateRandomPuzzle } from '../engine/generator'
 import { generateAutoXs, removeAutoXsForQueen } from '../engine/constraints'
 import { checkWinCondition } from '../engine/validator'
 import { analyzeForHint } from '../engine/hintAnalyzer'
@@ -22,23 +22,46 @@ const initialState: Omit<GameState, 'puzzle'> & { puzzle: null } = {
   isWon: false,
   hintsUsed: 0,
   currentHint: null,
-  isDragging: false
+  isDragging: false,
+  difficulty: 'medium',
+  isDailyPuzzle: true
 }
 
 export const useGameStore = create<GameStore>((set, get) => ({
   ...initialState,
 
   initGame: () => {
-    const puzzle = generatePuzzle()
+    const { difficulty, settings } = get()
+    const puzzle = generateDailyPuzzle(difficulty)
     set({
       ...initialState,
       puzzle,
+      difficulty,
+      settings, // Preserve user's settings
+      isDailyPuzzle: true,
       history: { past: [], future: [] }
     })
   },
 
   newGame: () => {
     get().initGame()
+  },
+
+  newRandomPuzzle: () => {
+    const { difficulty, settings } = get()
+    const puzzle = generateRandomPuzzle(difficulty)
+    set({
+      ...initialState,
+      puzzle,
+      difficulty,
+      settings, // Preserve user's settings
+      isDailyPuzzle: false,
+      history: { past: [], future: [] }
+    })
+  },
+
+  setDifficulty: (difficulty: Difficulty) => {
+    set({ difficulty })
   },
 
   saveSnapshot: () => {
@@ -86,7 +109,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
       get().removeManualX(row, col)
       get().placeQueen(row, col)
     } else {
-      // Empty -> X (place manual X)
+      // Empty -> X
       get().placeManualX(row, col)
     }
   },
@@ -335,12 +358,12 @@ export const useGameStore = create<GameStore>((set, get) => ({
   },
 
   showHint: () => {
-    const { queens, manualXs, autoXs, puzzle, hintsUsed, isWon } = get()
-    if (!puzzle || hintsUsed >= 3 || isWon) return
+    const { queens, manualXs, autoXs, puzzle, isWon } = get()
+    if (!puzzle || isWon) return
 
     const hint = analyzeForHint(queens, manualXs, autoXs, puzzle.regions)
     if (hint) {
-      set({ currentHint: hint, hintsUsed: hintsUsed + 1 })
+      set({ currentHint: hint })
     }
   },
 
