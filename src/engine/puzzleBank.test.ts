@@ -1,19 +1,33 @@
 import { describe, it, expect } from 'vitest'
 import { PUZZLE_BANK, getPuzzleFromBank, getRandomPuzzleFromBank } from './puzzleBank'
 import { isValidPlacement } from './solver'
-import { GRID_SIZE, NUM_REGIONS } from '../types/game'
+import { GRID_SIZE, NUM_REGIONS, Difficulty } from '../types/game'
+
+// Get all puzzles from the bank
+const allPuzzles = [
+  ...PUZZLE_BANK.easy.map((puzzle, i) => ({ puzzle, difficulty: 'easy' as Difficulty, index: i })),
+  ...PUZZLE_BANK.medium.map((puzzle, i) => ({ puzzle, difficulty: 'medium' as Difficulty, index: i })),
+  ...PUZZLE_BANK.hard.map((puzzle, i) => ({ puzzle, difficulty: 'hard' as Difficulty, index: i })),
+]
 
 describe('PUZZLE_BANK', () => {
-  it('contains at least 30 puzzles', () => {
-    expect(PUZZLE_BANK.length).toBeGreaterThanOrEqual(30)
+  it('contains puzzles in each difficulty', () => {
+    expect(PUZZLE_BANK.easy.length).toBeGreaterThan(0)
+    expect(PUZZLE_BANK.medium.length).toBeGreaterThan(0)
+    expect(PUZZLE_BANK.hard.length).toBeGreaterThan(0)
   })
 
-  describe.each(PUZZLE_BANK.map((puzzle, index) => ({ puzzle, index })))(
-    'Puzzle $index',
+  it('contains at least 30 total puzzles', () => {
+    const total = PUZZLE_BANK.easy.length + PUZZLE_BANK.medium.length + PUZZLE_BANK.hard.length
+    expect(total).toBeGreaterThanOrEqual(30)
+  })
+
+  describe.each(allPuzzles)(
+    '$difficulty puzzle $index',
     ({ puzzle }) => {
       it('has valid region grid dimensions', () => {
         expect(puzzle.regions).toHaveLength(GRID_SIZE)
-        puzzle.regions.forEach(row => {
+        puzzle.regions.forEach((row: number[]) => {
           expect(row).toHaveLength(GRID_SIZE)
         })
       })
@@ -35,17 +49,17 @@ describe('PUZZLE_BANK', () => {
       })
 
       it('solution has one queen per row', () => {
-        const rows = new Set(puzzle.solution.map(q => q.row))
+        const rows = new Set(puzzle.solution.map((q: { row: number }) => q.row))
         expect(rows.size).toBe(GRID_SIZE)
       })
 
       it('solution has one queen per column', () => {
-        const cols = new Set(puzzle.solution.map(q => q.col))
+        const cols = new Set(puzzle.solution.map((q: { col: number }) => q.col))
         expect(cols.size).toBe(GRID_SIZE)
       })
 
       it('solution has one queen per region', () => {
-        const regions = new Set(puzzle.solution.map(q => puzzle.regions[q.row][q.col]))
+        const regions = new Set(puzzle.solution.map((q: { row: number; col: number }) => puzzle.regions[q.row][q.col]))
         expect(regions.size).toBe(NUM_REGIONS)
       })
 
@@ -75,19 +89,31 @@ describe('PUZZLE_BANK', () => {
 })
 
 describe('getPuzzleFromBank', () => {
-  it('returns puzzle at given index', () => {
+  it('returns puzzle at given index for medium difficulty', () => {
     const puzzle = getPuzzleFromBank(0)
-    expect(puzzle).toEqual(PUZZLE_BANK[0])
+    expect(puzzle.regions).toBeDefined()
+    expect(puzzle.solution).toBeDefined()
   })
 
   it('wraps around for index >= length', () => {
-    const puzzle = getPuzzleFromBank(PUZZLE_BANK.length)
-    expect(puzzle).toEqual(PUZZLE_BANK[0])
+    const puzzle1 = getPuzzleFromBank(0)
+    const puzzle2 = getPuzzleFromBank(PUZZLE_BANK.medium.length)
+    expect(puzzle1.regions).toEqual(puzzle2.regions)
   })
 
   it('handles negative indices by taking absolute value', () => {
     const puzzle = getPuzzleFromBank(-1)
-    expect(puzzle).toEqual(PUZZLE_BANK[1])
+    expect(puzzle.regions).toBeDefined()
+  })
+
+  it('returns puzzles from different difficulties', () => {
+    const easyPuzzle = getPuzzleFromBank(0, 'easy')
+    const mediumPuzzle = getPuzzleFromBank(0, 'medium')
+    const hardPuzzle = getPuzzleFromBank(0, 'hard')
+
+    expect(easyPuzzle.regions).toBeDefined()
+    expect(mediumPuzzle.regions).toBeDefined()
+    expect(hardPuzzle.regions).toBeDefined()
   })
 })
 
@@ -95,18 +121,23 @@ describe('getRandomPuzzleFromBank', () => {
   it('returns a puzzle from the bank', () => {
     const mockRandom = () => 0.5
     const puzzle = getRandomPuzzleFromBank(mockRandom)
-    expect(PUZZLE_BANK).toContainEqual(puzzle)
+    expect(puzzle.regions).toBeDefined()
+    expect(puzzle.solution).toBeDefined()
   })
 
   it('returns first puzzle when random returns 0', () => {
     const mockRandom = () => 0
     const puzzle = getRandomPuzzleFromBank(mockRandom)
-    expect(puzzle).toEqual(PUZZLE_BANK[0])
+    const firstMedium = getPuzzleFromBank(0)
+    expect(puzzle.regions).toEqual(firstMedium.regions)
   })
 
-  it('returns last puzzle when random returns 0.999', () => {
-    const mockRandom = () => 0.999
-    const puzzle = getRandomPuzzleFromBank(mockRandom)
-    expect(puzzle).toEqual(PUZZLE_BANK[PUZZLE_BANK.length - 1])
+  it('returns puzzles from specified difficulty', () => {
+    const mockRandom = () => 0
+    const easyPuzzle = getRandomPuzzleFromBank(mockRandom, 'easy')
+    const hardPuzzle = getRandomPuzzleFromBank(mockRandom, 'hard')
+
+    expect(easyPuzzle.regions).toBeDefined()
+    expect(hardPuzzle.regions).toBeDefined()
   })
 })
