@@ -404,6 +404,97 @@
   overflow-x: auto;
 }
 
+/* Instructions Panel */
+.instructions {
+  margin-top: 24px;
+  background: #f8f8f8;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.instructions-toggle {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 14px 16px;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 600;
+  color: #333;
+  text-align: left;
+  transition: background 0.2s;
+}
+
+.instructions-toggle:hover {
+  background: #f0f0f0;
+}
+
+.instructions-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  background: #0a66c2;
+  color: white;
+  border-radius: 50%;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.instructions-arrow {
+  margin-left: auto;
+  font-size: 10px;
+  color: #666;
+  transition: transform 0.2s;
+}
+
+.instructions-arrow.expanded {
+  transform: rotate(180deg);
+}
+
+.instructions-content {
+  padding: 0 16px 16px;
+  border-top: 1px solid #e8e8e8;
+}
+
+.instructions-section {
+  margin-top: 16px;
+}
+
+.instructions-section h4 {
+  font-size: 13px;
+  font-weight: 600;
+  color: #0a66c2;
+  margin-bottom: 8px;
+}
+
+.instructions-section p {
+  font-size: 13px;
+  color: #555;
+  line-height: 1.5;
+  margin: 0;
+}
+
+.instructions-section ul {
+  margin: 0;
+  padding-left: 20px;
+  font-size: 13px;
+  color: #555;
+  line-height: 1.8;
+}
+
+.instructions-section li {
+  margin-bottom: 4px;
+}
+
+.instructions-section strong {
+  color: #333;
+}
+
 @media (max-width: 600px) {
   .controls {
     gap: 8px;

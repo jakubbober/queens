@@ -41,6 +41,9 @@ export interface GameState {
   // Puzzle settings
   difficulty: Difficulty
   isDailyPuzzle: boolean
+
+  // Color mapping for visual variety
+  colorMapping: number[]
 }
 
 export interface GameActions {

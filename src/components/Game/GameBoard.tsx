@@ -17,6 +17,7 @@ export function GameBoard() {
   const isWon = useGameStore(state => state.isWon)
   const currentHint = useGameStore(state => state.currentHint)
   const clearHint = useGameStore(state => state.clearHint)
+  const colorMapping = useGameStore(state => state.colorMapping)
 
   const boardRef = useRef<HTMLDivElement>(null)
 
@@ -127,6 +128,7 @@ export function GameBoard() {
               borderBottom={borderBottom}
               borderLeft={borderLeft}
               borderRight={borderRight}
+              colorMapping={colorMapping}
               onClick={() => handleCellClick(row, col)}
               onContextMenu={(e) => handleCellRightClick(e, row, col)}
             />

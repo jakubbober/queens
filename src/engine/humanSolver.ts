@@ -488,13 +488,20 @@ export function solveWithTechniques(regions: number[][]): SolveResult {
  * - How often complex techniques are used
  */
 export function getDifficultyFromSolve(
-  techniqueCounts: Record<Technique, number>
-): 'easy' | 'medium' | 'hard' {
+  techniqueCounts: Record<Technique, number>,
+  _stepCount?: number
+): 'easy' | 'medium' | 'hard' | 'expert' {
   const hiddenSingleCount = techniqueCounts[Technique.HIDDEN_SINGLE]
   const intersectionCount = techniqueCounts[Technique.INTERSECTION]
   const forcedEliminationCount = techniqueCounts[Technique.FORCED_ELIMINATION]
+  const advancedTotal = intersectionCount + forcedEliminationCount
 
-  // Hard: uses advanced techniques OR uses HIDDEN_SINGLE frequently (4+ times)
+  // Expert: uses multiple advanced techniques OR high complexity with advanced
+  if (advancedTotal >= 2 || (advancedTotal > 0 && hiddenSingleCount >= 3)) {
+    return 'expert'
+  }
+
+  // Hard: uses any advanced technique OR uses HIDDEN_SINGLE frequently (4+ times)
   if (
     intersectionCount > 0 ||
     forcedEliminationCount > 0 ||
@@ -516,7 +523,7 @@ export function getDifficultyFromSolve(
  * Rate a puzzle's difficulty by solving it with human techniques.
  */
 export function ratePuzzleDifficulty(regions: number[][]): {
-  difficulty: 'easy' | 'medium' | 'hard'
+  difficulty: 'easy' | 'medium' | 'hard' | 'expert'
   maxTechnique: Technique
   solvable: boolean
   requiresGuessing: boolean
@@ -524,12 +531,13 @@ export function ratePuzzleDifficulty(regions: number[][]): {
   techniqueCounts: Record<Technique, number>
 } {
   const result = solveWithTechniques(regions)
+  const stepCount = result.steps.length
   return {
-    difficulty: getDifficultyFromSolve(result.techniqueCounts),
+    difficulty: getDifficultyFromSolve(result.techniqueCounts, stepCount),
     maxTechnique: result.maxTechnique,
     solvable: result.solved,
     requiresGuessing: result.requiresGuessing,
-    stepCount: result.steps.length,
+    stepCount,
     techniqueCounts: result.techniqueCounts
   }
 }

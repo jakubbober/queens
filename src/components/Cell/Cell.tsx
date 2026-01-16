@@ -18,6 +18,7 @@ interface CellProps {
   onClick: () => void
   onContextMenu: (e: React.MouseEvent) => void
   isHinted?: boolean
+  colorMapping?: number[]
 }
 
 export const Cell = memo(function Cell({
@@ -34,9 +35,10 @@ export const Cell = memo(function Cell({
   borderRight,
   onClick,
   onContextMenu,
-  isHinted = false
+  isHinted = false,
+  colorMapping
 }: CellProps) {
-  const backgroundColor = getRegionColor(regionId)
+  const backgroundColor = getRegionColor(regionId, colorMapping)
 
   const classNames = [
     'cell',

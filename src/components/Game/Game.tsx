@@ -6,6 +6,7 @@ import { StatusBar } from '../UI/StatusBar'
 import { WinModal } from '../UI/WinModal'
 import { HintDisplay } from '../UI/HintDisplay'
 import { DebugPanel } from '../UI/DebugPanel'
+import { Instructions } from '../UI/Instructions'
 import { useGameInit, useTimer, useKeyboardShortcuts } from '../../hooks/useGameStore'
 import { useGameStore } from '../../store/gameStore'
 
@@ -37,6 +38,7 @@ export function Game() {
 
       <Controls />
       <Settings />
+      <Instructions />
       <WinModal />
       <DebugPanel />
     </div>

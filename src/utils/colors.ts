@@ -10,6 +10,7 @@ export const REGION_COLORS = [
   '#c9c9c9', // Light gray
 ]
 
-export const getRegionColor = (regionId: number): string => {
-  return REGION_COLORS[regionId % REGION_COLORS.length]
+export const getRegionColor = (regionId: number, colorMapping?: number[]): string => {
+  const colorIndex = colorMapping ? colorMapping[regionId] : regionId
+  return REGION_COLORS[colorIndex % REGION_COLORS.length]
 }

@@ -318,7 +318,7 @@ function generatePuzzle(seed: number, regularity: number): {
 interface RatedPuzzle {
   regions: number[][]
   solution: Position[]
-  difficulty: 'easy' | 'medium' | 'hard'
+  difficulty: 'easy' | 'medium' | 'hard' | 'expert'
   maxTechnique: number
   stepCount: number
 }
@@ -326,22 +326,26 @@ interface RatedPuzzle {
 async function main() {
   console.log('Starting puzzle bank generation...')
 
-  const targets = { easy: 100, medium: 100, hard: 50 }
-  const bank: { easy: RatedPuzzle[], medium: RatedPuzzle[], hard: RatedPuzzle[] } = {
+  // Targets for each difficulty - only generate hard, skip easy/medium
+  const targets = { easy: 100, medium: 100, hard: 50, expert: 0 }
+  const bank: { easy: RatedPuzzle[], medium: RatedPuzzle[], hard: RatedPuzzle[], expert: RatedPuzzle[] } = {
     easy: [],
     medium: [],
-    hard: []
+    hard: [],
+    expert: []
   }
 
   let seed = 1
   let attempts = 0
-  const maxAttempts = 50000
-  const regularities = [0.3, 0.5, 0.7, 0.9]
+  const maxAttempts = 100000
+  // Use lower regularity values to create more complex region shapes (harder puzzles)
+  const regularities = [0.1, 0.2, 0.3, 0.4]
 
   while (
     (bank.easy.length < targets.easy ||
      bank.medium.length < targets.medium ||
-     bank.hard.length < targets.hard) &&
+     bank.hard.length < targets.hard ||
+     bank.expert.length < targets.expert) &&
     attempts < maxAttempts
   ) {
     attempts++
@@ -367,18 +371,21 @@ async function main() {
     // Only add if we need more of this difficulty
     if (rating.difficulty === 'easy' && bank.easy.length < targets.easy) {
       bank.easy.push(ratedPuzzle)
-      console.log(`Easy: ${bank.easy.length}/${targets.easy}, Medium: ${bank.medium.length}/${targets.medium}, Hard: ${bank.hard.length}/${targets.hard}`)
+      if (bank.easy.length % 20 === 0) console.log(`Easy: ${bank.easy.length}/${targets.easy}`)
     } else if (rating.difficulty === 'medium' && bank.medium.length < targets.medium) {
       bank.medium.push(ratedPuzzle)
-      console.log(`Easy: ${bank.easy.length}/${targets.easy}, Medium: ${bank.medium.length}/${targets.medium}, Hard: ${bank.hard.length}/${targets.hard}`)
+      if (bank.medium.length % 20 === 0) console.log(`Medium: ${bank.medium.length}/${targets.medium}`)
     } else if (rating.difficulty === 'hard' && bank.hard.length < targets.hard) {
       bank.hard.push(ratedPuzzle)
-      console.log(`Easy: ${bank.easy.length}/${targets.easy}, Medium: ${bank.medium.length}/${targets.medium}, Hard: ${bank.hard.length}/${targets.hard}`)
+      console.log(`Hard: ${bank.hard.length}/${targets.hard}`)
+    } else if (rating.difficulty === 'expert' && bank.expert.length < targets.expert) {
+      bank.expert.push(ratedPuzzle)
+      console.log(`Expert: ${bank.expert.length}/${targets.expert}`)
     }
   }
 
   console.log(`\nGeneration complete after ${attempts} attempts:`)
-  console.log(`Easy: ${bank.easy.length}, Medium: ${bank.medium.length}, Hard: ${bank.hard.length}`)
+  console.log(`Easy: ${bank.easy.length}, Medium: ${bank.medium.length}, Hard: ${bank.hard.length}, Expert: ${bank.expert.length}`)
 
   // Generate the output file
   const output = `/**
@@ -393,7 +400,7 @@ import { Position } from '../types/game'
 export interface RatedPuzzle {
   regions: number[][]
   solution: Position[]
-  difficulty: 'easy' | 'medium' | 'hard'
+  difficulty: 'easy' | 'medium' | 'hard' | 'expert'
   maxTechnique: number
   stepCount: number
 }
@@ -402,10 +409,11 @@ export const PUZZLE_BANK: {
   easy: RatedPuzzle[]
   medium: RatedPuzzle[]
   hard: RatedPuzzle[]
+  expert: RatedPuzzle[]
 } = ${JSON.stringify(bank, null, 2)}
 
 export function getRandomPuzzle(
-  difficulty: 'easy' | 'medium' | 'hard',
+  difficulty: 'easy' | 'medium' | 'hard' | 'expert',
   random: () => number
 ): RatedPuzzle {
   const puzzles = PUZZLE_BANK[difficulty]
@@ -414,7 +422,7 @@ export function getRandomPuzzle(
 }
 
 export function getDailyPuzzle(
-  difficulty: 'easy' | 'medium' | 'hard',
+  difficulty: 'easy' | 'medium' | 'hard' | 'expert',
   seed: number
 ): RatedPuzzle {
   const puzzles = PUZZLE_BANK[difficulty]

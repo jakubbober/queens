@@ -11,6 +11,21 @@ function generateQueenId(): string {
   return `queen-${++queenIdCounter}`
 }
 
+// Shuffle array using Fisher-Yates algorithm
+function shuffleArray<T>(array: T[]): T[] {
+  const result = [...array]
+  for (let i = result.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1))
+    ;[result[i], result[j]] = [result[j], result[i]]
+  }
+  return result
+}
+
+// Generate a shuffled color mapping
+function generateColorMapping(): number[] {
+  return shuffleArray([0, 1, 2, 3, 4, 5, 6, 7, 8])
+}
+
 const initialState: Omit<GameState, 'puzzle'> & { puzzle: null } = {
   puzzle: null,
   queens: [],
@@ -24,7 +39,8 @@ const initialState: Omit<GameState, 'puzzle'> & { puzzle: null } = {
   currentHint: null,
   isDragging: false,
   difficulty: 'medium',
-  isDailyPuzzle: true
+  isDailyPuzzle: true,
+  colorMapping: [0, 1, 2, 3, 4, 5, 6, 7, 8]
 }
 
 export const useGameStore = create<GameStore>((set, get) => ({
@@ -39,6 +55,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
       difficulty,
       settings, // Preserve user's settings
       isDailyPuzzle: true,
+      colorMapping: generateColorMapping(),
       history: { past: [], future: [] }
     })
   },
@@ -56,6 +73,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
       difficulty,
       settings, // Preserve user's settings
       isDailyPuzzle: false,
+      colorMapping: generateColorMapping(),
       history: { past: [], future: [] }
     })
   },
