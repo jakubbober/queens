@@ -1,10 +1,10 @@
 import { useCallback, useRef, useState } from 'react'
 import { useGameStore } from '../store/gameStore'
-import { Position, GRID_SIZE } from '../types/game'
+import { Position } from '../types/game'
 
 export type DragMode = 'place' | 'erase' | null
 
-export function useDragToMark(boardRef: React.RefObject<HTMLDivElement | null>) {
+export function useDragToMark(boardRef: React.RefObject<HTMLDivElement | null>, gridSize: number) {
   const placeManualX = useGameStore(state => state.placeManualX)
   const removeManualX = useGameStore(state => state.removeManualX)
   const saveSnapshot = useGameStore(state => state.saveSnapshot)
@@ -27,12 +27,12 @@ export function useDragToMark(boardRef: React.RefObject<HTMLDivElement | null>) 
     const rect = board.getBoundingClientRect()
     const x = clientX - rect.left
     const y = clientY - rect.top
-    const cellSize = rect.width / GRID_SIZE
+    const cellSize = rect.width / gridSize
 
     const col = Math.floor(x / cellSize)
     const row = Math.floor(y / cellSize)
 
-    if (row >= 0 && row < GRID_SIZE && col >= 0 && col < GRID_SIZE) {
+    if (row >= 0 && row < gridSize && col >= 0 && col < gridSize) {
       return { row, col }
     }
     return null

@@ -1,4 +1,4 @@
-import { Position, Queen, AutoPlacedX, GRID_SIZE } from '../types/game'
+import { Position, Queen, AutoPlacedX } from '../types/game'
 import { validatePlacement } from './validator'
 import { isValidPlacement } from './solver'
 import { debug } from '../store/debugStore'
@@ -38,8 +38,9 @@ function getRegionName(regionId: number): string {
 
 function getCellsInRegion(regions: number[][], regionId: number): Position[] {
   const cells: Position[] = []
-  for (let row = 0; row < GRID_SIZE; row++) {
-    for (let col = 0; col < GRID_SIZE; col++) {
+  const gridSize = regions.length
+  for (let row = 0; row < gridSize; row++) {
+    for (let col = 0; col < gridSize; col++) {
       if (regions[row][col] === regionId) {
         cells.push({ row, col })
       }
@@ -106,8 +107,9 @@ function findBestRegionHint(
   let bestRegion = -1
   let bestCount = Infinity
   let bestCells: Position[] = []
+  const gridSize = regions.length
 
-  for (let regionId = 0; regionId < GRID_SIZE; regionId++) {
+  for (let regionId = 0; regionId < gridSize; regionId++) {
     // Skip regions that already have a queen
     if (queens.some(q => regions[q.position.row][q.position.col] === regionId)) {
       continue
@@ -149,15 +151,17 @@ export function analyzeForHint(
 ): Hint {
   debug.log('hints', `Analyzing for hint with ${queens.length} queens placed`)
 
+  const gridSize = regions.length
+
   // Build cell info grid
   const cellInfo: CellInfo[][] = []
   const queenPositions = new Set(queens.map(q => `${q.position.row},${q.position.col}`))
   const manualXPositions = new Set(manualXs.map(x => `${x.row},${x.col}`))
   const autoXPositions = new Set(autoXs.map(x => `${x.position.row},${x.position.col}`))
 
-  for (let row = 0; row < GRID_SIZE; row++) {
+  for (let row = 0; row < gridSize; row++) {
     cellInfo[row] = []
-    for (let col = 0; col < GRID_SIZE; col++) {
+    for (let col = 0; col < gridSize; col++) {
       const key = `${row},${col}`
       cellInfo[row][col] = {
         row,
@@ -248,13 +252,13 @@ export function analyzeForHint(
   }
 
   // 2. Check for naked singles in rows
-  for (let row = 0; row < GRID_SIZE; row++) {
+  for (let row = 0; row < gridSize; row++) {
     if (queens.some(q => q.position.row === row)) continue
 
     const validCells: Position[] = []
     const rowCells: Position[] = []
 
-    for (let col = 0; col < GRID_SIZE; col++) {
+    for (let col = 0; col < gridSize; col++) {
       rowCells.push({ row, col })
       const info = cellInfo[row][col]
       if (!info.hasQueen && !info.isBlocked) {
@@ -276,13 +280,13 @@ export function analyzeForHint(
   }
 
   // 3. Check for naked singles in columns
-  for (let col = 0; col < GRID_SIZE; col++) {
+  for (let col = 0; col < gridSize; col++) {
     if (queens.some(q => q.position.col === col)) continue
 
     const validCells: Position[] = []
     const colCells: Position[] = []
 
-    for (let row = 0; row < GRID_SIZE; row++) {
+    for (let row = 0; row < gridSize; row++) {
       colCells.push({ row, col })
       const info = cellInfo[row][col]
       if (!info.hasQueen && !info.isBlocked) {
@@ -304,7 +308,7 @@ export function analyzeForHint(
   }
 
   // 4. Check for naked singles in regions
-  for (let regionId = 0; regionId < GRID_SIZE; regionId++) {
+  for (let regionId = 0; regionId < gridSize; regionId++) {
     if (queens.some(q => regions[q.position.row][q.position.col] === regionId)) continue
 
     const regionCells = getCellsInRegion(regions, regionId)
@@ -331,8 +335,8 @@ export function analyzeForHint(
   }
 
   // 5. Look for elimination opportunities (relaxed criteria)
-  for (let row = 0; row < GRID_SIZE; row++) {
-    for (let col = 0; col < GRID_SIZE; col++) {
+  for (let row = 0; row < gridSize; row++) {
+    for (let col = 0; col < gridSize; col++) {
       const info = cellInfo[row][col]
       if (info.hasQueen || info.isBlocked) continue
 
@@ -349,10 +353,10 @@ export function analyzeForHint(
         let validInRow = 0
         let validInCol = 0
 
-        for (let c = 0; c < GRID_SIZE; c++) {
+        for (let c = 0; c < gridSize; c++) {
           if (!cellInfo[row][c].hasQueen && !cellInfo[row][c].isBlocked) validInRow++
         }
-        for (let r = 0; r < GRID_SIZE; r++) {
+        for (let r = 0; r < gridSize; r++) {
           if (!cellInfo[r][col].hasQueen && !cellInfo[r][col].isBlocked) validInCol++
         }
 

@@ -4,12 +4,8 @@ import { PUZZLE_BANK, RatedPuzzle } from './puzzleBankGenerated'
 export { PUZZLE_BANK }
 export type { RatedPuzzle }
 
-export function getPuzzleFromBank(index: number, difficulty: Difficulty = 'medium'): Puzzle {
-  let puzzles = PUZZLE_BANK[difficulty]
-  // Fallback to hard if expert has no puzzles
-  if (puzzles.length === 0 && difficulty === 'expert') {
-    puzzles = PUZZLE_BANK['hard']
-  }
+export function getPuzzleFromBank(index: number, difficulty: Difficulty = 'expert'): Puzzle {
+  const puzzles = PUZZLE_BANK[difficulty]
   const puzzle = puzzles[Math.abs(index) % puzzles.length]
   return {
     regions: puzzle.regions.map(row => [...row]),
@@ -17,12 +13,8 @@ export function getPuzzleFromBank(index: number, difficulty: Difficulty = 'mediu
   }
 }
 
-export function getRandomPuzzleFromBank(random: () => number, difficulty: Difficulty = 'medium'): Puzzle {
-  let puzzles = PUZZLE_BANK[difficulty]
-  // Fallback to hard if expert has no puzzles
-  if (puzzles.length === 0 && difficulty === 'expert') {
-    puzzles = PUZZLE_BANK['hard']
-  }
+export function getRandomPuzzleFromBank(random: () => number, difficulty: Difficulty = 'expert'): Puzzle {
+  const puzzles = PUZZLE_BANK[difficulty]
   const index = Math.floor(random() * puzzles.length)
   const puzzle = puzzles[index]
   return {
@@ -31,12 +23,8 @@ export function getRandomPuzzleFromBank(random: () => number, difficulty: Diffic
   }
 }
 
-export function getDailyPuzzleFromBank(seed: number, difficulty: Difficulty = 'medium'): Puzzle {
-  let puzzles = PUZZLE_BANK[difficulty]
-  // Fallback to hard if expert has no puzzles
-  if (puzzles.length === 0 && difficulty === 'expert') {
-    puzzles = PUZZLE_BANK['hard']
-  }
+export function getDailyPuzzleFromBank(seed: number, difficulty: Difficulty = 'expert'): Puzzle {
+  const puzzles = PUZZLE_BANK[difficulty]
   const index = seed % puzzles.length
   const puzzle = puzzles[index]
   return {

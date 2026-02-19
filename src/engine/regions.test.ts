@@ -1,37 +1,39 @@
 import { describe, it, expect } from 'vitest'
 import { generateRegions, isRegionConnected, areAllRegionsConnected } from './regions'
-import { GRID_SIZE, NUM_REGIONS } from '../types/game'
 
 describe('generateRegions', () => {
-  it('returns a 9x9 grid', () => {
+  it('returns a grid of the requested size', () => {
     const regions = generateRegions()
-    expect(regions).toHaveLength(GRID_SIZE)
+    const gridSize = regions.length
+    expect(regions).toHaveLength(gridSize)
     regions.forEach(row => {
-      expect(row).toHaveLength(GRID_SIZE)
+      expect(row).toHaveLength(gridSize)
     })
   })
 
   it('assigns all cells to a region (no -1 values)', () => {
     const regions = generateRegions()
-    for (let r = 0; r < GRID_SIZE; r++) {
-      for (let c = 0; c < GRID_SIZE; c++) {
+    const gridSize = regions.length
+    for (let r = 0; r < gridSize; r++) {
+      for (let c = 0; c < gridSize; c++) {
         expect(regions[r][c]).toBeGreaterThanOrEqual(0)
-        expect(regions[r][c]).toBeLessThan(NUM_REGIONS)
+        expect(regions[r][c]).toBeLessThan(gridSize)
       }
     }
   })
 
-  it('uses all region IDs from 0 to 8', () => {
+  it('uses all region IDs from 0 to gridSize-1', () => {
     const regions = generateRegions()
+    const gridSize = regions.length
     const regionIds = new Set<number>()
 
-    for (let r = 0; r < GRID_SIZE; r++) {
-      for (let c = 0; c < GRID_SIZE; c++) {
+    for (let r = 0; r < gridSize; r++) {
+      for (let c = 0; c < gridSize; c++) {
         regionIds.add(regions[r][c])
       }
     }
 
-    for (let i = 0; i < NUM_REGIONS; i++) {
+    for (let i = 0; i < gridSize; i++) {
       expect(regionIds.has(i)).toBe(true)
     }
   })

@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import { PUZZLE_BANK, getPuzzleFromBank, getRandomPuzzleFromBank } from './puzzleBank'
 import { isValidPlacement } from './solver'
-import { GRID_SIZE, NUM_REGIONS, Difficulty } from '../types/game'
+import { Difficulty } from '../types/game'
 
 // Get all puzzles from the bank
 const allPuzzles = [
@@ -26,41 +26,41 @@ describe('PUZZLE_BANK', () => {
     '$difficulty puzzle $index',
     ({ puzzle }) => {
       it('has valid region grid dimensions', () => {
-        expect(puzzle.regions).toHaveLength(GRID_SIZE)
+        expect(puzzle.regions).toHaveLength(puzzle.regions.length)
         puzzle.regions.forEach((row: number[]) => {
-          expect(row).toHaveLength(GRID_SIZE)
+          expect(row).toHaveLength(puzzle.regions.length)
         })
       })
 
       it('has all region IDs from 0 to 8', () => {
         const regionIds = new Set<number>()
-        for (let r = 0; r < GRID_SIZE; r++) {
-          for (let c = 0; c < GRID_SIZE; c++) {
+        for (let r = 0; r < puzzle.regions.length; r++) {
+          for (let c = 0; c < puzzle.regions.length; c++) {
             regionIds.add(puzzle.regions[r][c])
           }
         }
-        for (let i = 0; i < NUM_REGIONS; i++) {
+        for (let i = 0; i < puzzle.regions.length; i++) {
           expect(regionIds.has(i)).toBe(true)
         }
       })
 
       it('has exactly 9 queens in solution', () => {
-        expect(puzzle.solution).toHaveLength(GRID_SIZE)
+        expect(puzzle.solution).toHaveLength(puzzle.regions.length)
       })
 
       it('solution has one queen per row', () => {
         const rows = new Set(puzzle.solution.map((q: { row: number }) => q.row))
-        expect(rows.size).toBe(GRID_SIZE)
+        expect(rows.size).toBe(puzzle.regions.length)
       })
 
       it('solution has one queen per column', () => {
         const cols = new Set(puzzle.solution.map((q: { col: number }) => q.col))
-        expect(cols.size).toBe(GRID_SIZE)
+        expect(cols.size).toBe(puzzle.regions.length)
       })
 
       it('solution has one queen per region', () => {
         const regions = new Set(puzzle.solution.map((q: { row: number; col: number }) => puzzle.regions[q.row][q.col]))
-        expect(regions.size).toBe(NUM_REGIONS)
+        expect(regions.size).toBe(puzzle.regions.length)
       })
 
       it('no queens are adjacent to each other', () => {

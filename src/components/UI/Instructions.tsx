@@ -22,7 +22,7 @@ export function Instructions() {
         <div className="instructions-content">
           <div className="instructions-section">
             <h4>Goal</h4>
-            <p>Place exactly <strong>9 queens</strong> on the board - one in each row, column, and colored region.</p>
+            <p>Place exactly <strong>10 queens</strong> on the board - one in each row, column, and colored region.</p>
           </div>
 
           <div className="instructions-section">

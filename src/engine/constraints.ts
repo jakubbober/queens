@@ -1,4 +1,4 @@
-import { Position, Queen, AutoPlacedX, GRID_SIZE } from '../types/game'
+import { Position, Queen, AutoPlacedX } from '../types/game'
 
 let xIdCounter = 0
 
@@ -16,6 +16,7 @@ export function generateAutoXs(
   const autoXs: AutoPlacedX[] = []
   const { row, col } = queen.position
   const queenRegion = regions[row][col]
+  const gridSize = regions.length
 
   // Get positions already occupied
   const occupiedPositions = new Set<string>()
@@ -34,7 +35,7 @@ export function generateAutoXs(
   })
 
   // Mark same row
-  for (let c = 0; c < GRID_SIZE; c++) {
+  for (let c = 0; c < gridSize; c++) {
     if (c !== col && !occupiedPositions.has(`${row},${c}`)) {
       autoXs.push({
         id: generateXId(),
@@ -46,7 +47,7 @@ export function generateAutoXs(
   }
 
   // Mark same column
-  for (let r = 0; r < GRID_SIZE; r++) {
+  for (let r = 0; r < gridSize; r++) {
     if (r !== row && !occupiedPositions.has(`${r},${col}`)) {
       autoXs.push({
         id: generateXId(),
@@ -58,8 +59,8 @@ export function generateAutoXs(
   }
 
   // Mark same region
-  for (let r = 0; r < GRID_SIZE; r++) {
-    for (let c = 0; c < GRID_SIZE; c++) {
+  for (let r = 0; r < gridSize; r++) {
+    for (let c = 0; c < gridSize; c++) {
       if (regions[r][c] === queenRegion && (r !== row || c !== col)) {
         if (!occupiedPositions.has(`${r},${c}`)) {
           autoXs.push({
@@ -81,7 +82,7 @@ export function generateAutoXs(
       const r = row + dr
       const c = col + dc
 
-      if (r >= 0 && r < GRID_SIZE && c >= 0 && c < GRID_SIZE) {
+      if (r >= 0 && r < gridSize && c >= 0 && c < gridSize) {
         if (!occupiedPositions.has(`${r},${c}`)) {
           autoXs.push({
             id: generateXId(),

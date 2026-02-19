@@ -1,5 +1,3 @@
-import { GRID_SIZE, NUM_REGIONS } from '../types/game'
-
 interface Cell {
   row: number
   col: number
@@ -14,14 +12,14 @@ function shuffle<T>(array: T[]): T[] {
   return result
 }
 
-function getNeighbors(row: number, col: number): Cell[] {
+function getNeighbors(row: number, col: number, gridSize: number): Cell[] {
   const neighbors: Cell[] = []
   const directions = [[-1, 0], [1, 0], [0, -1], [0, 1]]
 
   for (const [dr, dc] of directions) {
     const nr = row + dr
     const nc = col + dc
-    if (nr >= 0 && nr < GRID_SIZE && nc >= 0 && nc < GRID_SIZE) {
+    if (nr >= 0 && nr < gridSize && nc >= 0 && nc < gridSize) {
       neighbors.push({ row: nr, col: nc })
     }
   }
@@ -29,19 +27,20 @@ function getNeighbors(row: number, col: number): Cell[] {
   return neighbors
 }
 
-export function generateRegions(): number[][] {
-  const regions: number[][] = Array(GRID_SIZE)
+export function generateRegions(gridSize: number = 10): number[][] {
+  const numRegions = gridSize
+  const regions: number[][] = Array(gridSize)
     .fill(null)
-    .map(() => Array(GRID_SIZE).fill(-1))
+    .map(() => Array(gridSize).fill(-1))
 
-  const cellsPerRegion = (GRID_SIZE * GRID_SIZE) / NUM_REGIONS
+  const cellsPerRegion = (gridSize * gridSize) / numRegions
 
   // Pick random starting points for each region
   const startPoints: Cell[] = []
   const allCells: Cell[] = []
 
-  for (let r = 0; r < GRID_SIZE; r++) {
-    for (let c = 0; c < GRID_SIZE; c++) {
+  for (let r = 0; r < gridSize; r++) {
+    for (let c = 0; c < gridSize; c++) {
       allCells.push({ row: r, col: c })
     }
   }
@@ -49,7 +48,7 @@ export function generateRegions(): number[][] {
   const shuffledCells = shuffle(allCells)
 
   // Pick well-distributed starting points
-  for (let i = 0; i < NUM_REGIONS; i++) {
+  for (let i = 0; i < numRegions; i++) {
     const targetRow = Math.floor(i / 3) * 3 + 1
     const targetCol = (i % 3) * 3 + 1
 
@@ -73,16 +72,16 @@ export function generateRegions(): number[][] {
 
   // Grow regions using flood fill with randomization
   const frontiers: Cell[][] = startPoints.map(p => [p])
-  const regionSizes = Array(NUM_REGIONS).fill(1)
+  const regionSizes = Array(numRegions).fill(1)
 
-  let unassigned = GRID_SIZE * GRID_SIZE - NUM_REGIONS
+  let unassigned = gridSize * gridSize - numRegions
 
   while (unassigned > 0) {
     // Find region with smallest size that still has frontier
     let minSize = Infinity
     let minRegion = -1
 
-    for (let i = 0; i < NUM_REGIONS; i++) {
+    for (let i = 0; i < numRegions; i++) {
       if (frontiers[i].length > 0 && regionSizes[i] < minSize) {
         minSize = regionSizes[i]
         minRegion = i
@@ -97,7 +96,7 @@ export function generateRegions(): number[][] {
     const cell = frontier[randomIdx]
 
     // Get unassigned neighbors
-    const neighbors = shuffle(getNeighbors(cell.row, cell.col))
+    const neighbors = shuffle(getNeighbors(cell.row, cell.col, gridSize))
     let expanded = false
 
     for (const neighbor of neighbors) {
@@ -118,10 +117,10 @@ export function generateRegions(): number[][] {
   }
 
   // Handle any remaining unassigned cells
-  for (let r = 0; r < GRID_SIZE; r++) {
-    for (let c = 0; c < GRID_SIZE; c++) {
+  for (let r = 0; r < gridSize; r++) {
+    for (let c = 0; c < gridSize; c++) {
       if (regions[r][c] === -1) {
-        const neighbors = getNeighbors(r, c)
+        const neighbors = getNeighbors(r, c, gridSize)
         for (const neighbor of neighbors) {
           if (regions[neighbor.row][neighbor.col] !== -1) {
             regions[r][c] = regions[neighbor.row][neighbor.col]
@@ -136,10 +135,11 @@ export function generateRegions(): number[][] {
 }
 
 export function isRegionConnected(regions: number[][], regionId: number): boolean {
+  const gridSize = regions.length
   const cells: Cell[] = []
 
-  for (let r = 0; r < GRID_SIZE; r++) {
-    for (let c = 0; c < GRID_SIZE; c++) {
+  for (let r = 0; r < gridSize; r++) {
+    for (let c = 0; c < gridSize; c++) {
       if (regions[r][c] === regionId) {
         cells.push({ row: r, col: c })
       }
@@ -154,7 +154,7 @@ export function isRegionConnected(regions: number[][], regionId: number): boolea
 
   while (queue.length > 0) {
     const cell = queue.shift()!
-    const neighbors = getNeighbors(cell.row, cell.col)
+    const neighbors = getNeighbors(cell.row, cell.col, gridSize)
 
     for (const neighbor of neighbors) {
       const key = `${neighbor.row},${neighbor.col}`
@@ -169,7 +169,8 @@ export function isRegionConnected(regions: number[][], regionId: number): boolea
 }
 
 export function areAllRegionsConnected(regions: number[][]): boolean {
-  for (let i = 0; i < NUM_REGIONS; i++) {
+  const numRegions = regions.length
+  for (let i = 0; i < numRegions; i++) {
     if (!isRegionConnected(regions, i)) {
       return false
     }

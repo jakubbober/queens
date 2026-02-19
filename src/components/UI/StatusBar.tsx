@@ -1,5 +1,4 @@
 import { useGameStore } from '../../store/gameStore'
-import { GRID_SIZE } from '../../types/game'
 import './UI.css'
 
 export function StatusBar() {
@@ -9,11 +8,12 @@ export function StatusBar() {
   if (!puzzle) return null
 
   const { regions } = puzzle
+  const gridSize = regions.length
 
   // Count completed rows, columns, and regions
-  const rowCounts = Array(GRID_SIZE).fill(0)
-  const colCounts = Array(GRID_SIZE).fill(0)
-  const regionCounts = Array(GRID_SIZE).fill(0)
+  const rowCounts = Array(gridSize).fill(0)
+  const colCounts = Array(gridSize).fill(0)
+  const regionCounts = Array(gridSize).fill(0)
 
   queens.forEach(q => {
     rowCounts[q.position.row]++
@@ -29,21 +29,21 @@ export function StatusBar() {
     <div className="status-bar">
       <div className="status-item">
         <span
-          className={`status-dot ${completedRows === GRID_SIZE ? 'complete' : 'incomplete'}`}
+          className={`status-dot ${completedRows === gridSize ? 'complete' : 'incomplete'}`}
         />
-        Rows: {completedRows}/{GRID_SIZE}
+        Rows: {completedRows}/{gridSize}
       </div>
       <div className="status-item">
         <span
-          className={`status-dot ${completedCols === GRID_SIZE ? 'complete' : 'incomplete'}`}
+          className={`status-dot ${completedCols === gridSize ? 'complete' : 'incomplete'}`}
         />
-        Cols: {completedCols}/{GRID_SIZE}
+        Cols: {completedCols}/{gridSize}
       </div>
       <div className="status-item">
         <span
-          className={`status-dot ${completedRegions === GRID_SIZE ? 'complete' : 'incomplete'}`}
+          className={`status-dot ${completedRegions === gridSize ? 'complete' : 'incomplete'}`}
         />
-        Regions: {completedRegions}/{GRID_SIZE}
+        Regions: {completedRegions}/{gridSize}
       </div>
     </div>
   )

@@ -1,4 +1,4 @@
-import { Position, GRID_SIZE } from '../types/game'
+import { Position } from '../types/game'
 
 export interface SolverResult {
   solved: boolean
@@ -33,17 +33,18 @@ export function solve(
   maxSolutions: number = 2
 ): SolverResult {
   const solutions: Position[][] = []
+  const gridSize = regions.length
 
   function backtrack(queens: Position[], startRow: number): void {
     if (solutions.length >= maxSolutions) return
 
-    if (queens.length === GRID_SIZE) {
+    if (queens.length === gridSize) {
       solutions.push([...queens])
       return
     }
 
-    for (let row = startRow; row < GRID_SIZE; row++) {
-      for (let col = 0; col < GRID_SIZE; col++) {
+    for (let row = startRow; row < gridSize; row++) {
+      for (let col = 0; col < gridSize; col++) {
         if (isValidPlacement(queens, regions, row, col)) {
           queens.push({ row, col })
           backtrack(queens, row + 1)

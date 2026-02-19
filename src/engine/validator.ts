@@ -1,4 +1,4 @@
-import { Position, Queen, GRID_SIZE } from '../types/game'
+import { Position, Queen } from '../types/game'
 
 export interface ValidationResult {
   isValid: boolean
@@ -20,9 +20,10 @@ export function validatePlacement(
   const adjacentConflicts: Position[][] = []
 
   const positions = queens.map(q => q.position)
+  const gridSize = regions.length
 
   // Check row conflicts
-  for (let row = 0; row < GRID_SIZE; row++) {
+  for (let row = 0; row < gridSize; row++) {
     const inRow = positions.filter(p => p.row === row)
     if (inRow.length > 1) {
       rowConflicts.set(row, inRow)
@@ -31,7 +32,7 @@ export function validatePlacement(
   }
 
   // Check column conflicts
-  for (let col = 0; col < GRID_SIZE; col++) {
+  for (let col = 0; col < gridSize; col++) {
     const inCol = positions.filter(p => p.col === col)
     if (inCol.length > 1) {
       colConflicts.set(col, inCol)
@@ -40,7 +41,7 @@ export function validatePlacement(
   }
 
   // Check region conflicts
-  for (let region = 0; region < GRID_SIZE; region++) {
+  for (let region = 0; region < gridSize; region++) {
     const inRegion = positions.filter(p => regions[p.row][p.col] === region)
     if (inRegion.length > 1) {
       regionConflicts.set(region, inRegion)
@@ -73,7 +74,8 @@ export function validatePlacement(
 }
 
 export function checkWinCondition(queens: Queen[], regions: number[][]): boolean {
-  if (queens.length !== GRID_SIZE) return false
+  const gridSize = regions.length
+  if (queens.length !== gridSize) return false
 
   const validation = validatePlacement(queens, regions)
   if (!validation.isValid) return false
@@ -85,5 +87,5 @@ export function checkWinCondition(queens: Queen[], regions: number[][]): boolean
   const cols = new Set(positions.map(p => p.col))
   const regionSet = new Set(positions.map(p => regions[p.row][p.col]))
 
-  return rows.size === GRID_SIZE && cols.size === GRID_SIZE && regionSet.size === GRID_SIZE
+  return rows.size === gridSize && cols.size === gridSize && regionSet.size === gridSize
 }

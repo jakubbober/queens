@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { isValidPlacement, solve, countSolutions, findSolution, hasUniqueSolution } from './solver'
-import { Position, GRID_SIZE } from '../types/game'
+import { Position } from '../types/game'
 
 describe('isValidPlacement', () => {
   const sampleRegions: number[][] = [
@@ -74,28 +74,28 @@ describe('solve', () => {
     const result = solve(sampleRegions)
     expect(result.solved).toBe(true)
     expect(result.solutions.length).toBeGreaterThan(0)
-    expect(result.solutions[0]).toHaveLength(GRID_SIZE)
+    expect(result.solutions[0]).toHaveLength(sampleRegions.length)
   })
 
   it('solution has one queen per row', () => {
     const result = solve(sampleRegions)
     const solution = result.solutions[0]
     const rows = new Set(solution.map(q => q.row))
-    expect(rows.size).toBe(GRID_SIZE)
+    expect(rows.size).toBe(sampleRegions.length)
   })
 
   it('solution has one queen per column', () => {
     const result = solve(sampleRegions)
     const solution = result.solutions[0]
     const cols = new Set(solution.map(q => q.col))
-    expect(cols.size).toBe(GRID_SIZE)
+    expect(cols.size).toBe(sampleRegions.length)
   })
 
   it('solution has one queen per region', () => {
     const result = solve(sampleRegions)
     const solution = result.solutions[0]
     const regions = new Set(solution.map(q => sampleRegions[q.row][q.col]))
-    expect(regions.size).toBe(GRID_SIZE)
+    expect(regions.size).toBe(sampleRegions.length)
   })
 
   it('respects maxSolutions parameter', () => {
@@ -137,7 +137,7 @@ describe('findSolution', () => {
     ]
     const solution = findSolution(regions)
     expect(solution).not.toBeNull()
-    expect(solution).toHaveLength(GRID_SIZE)
+    expect(solution).toHaveLength(regions.length)
   })
 })
 

@@ -3,7 +3,7 @@
  * Used for rating puzzle difficulty based on solving strategies required.
  */
 
-import { Position, GRID_SIZE, NUM_REGIONS } from '../types/game'
+import { Position } from '../types/game'
 
 // Technique difficulty levels (higher = harder)
 export enum Technique {
@@ -34,8 +34,10 @@ export interface SolveResult {
  * Solve a puzzle using human-like techniques and track which ones are needed.
  */
 export function solveWithTechniques(regions: number[][]): SolveResult {
+  const gridSize = regions.length
+  const numRegions = gridSize
   // Initialize candidate grid - all cells start as candidates
-  const candidates: boolean[][] = Array(GRID_SIZE).fill(null).map(() => Array(GRID_SIZE).fill(true))
+  const candidates: boolean[][] = Array(gridSize).fill(null).map(() => Array(gridSize).fill(true))
   const placedQueens: Position[] = []
   const steps: SolveStep[] = []
   let maxTechnique = Technique.NAKED_SINGLE
@@ -50,9 +52,9 @@ export function solveWithTechniques(regions: number[][]): SolveResult {
   }
 
   // Track which rows, columns, and regions have queens
-  const rowHasQueen = Array(GRID_SIZE).fill(false)
-  const colHasQueen = Array(GRID_SIZE).fill(false)
-  const regionHasQueen = Array(NUM_REGIONS).fill(false)
+  const rowHasQueen = Array(gridSize).fill(false)
+  const colHasQueen = Array(gridSize).fill(false)
+  const regionHasQueen = Array(numRegions).fill(false)
 
   // Helper: eliminate a candidate
   function eliminate(row: number, col: number): void {
@@ -73,19 +75,19 @@ export function solveWithTechniques(regions: number[][]): SolveResult {
     }
 
     // Eliminate all cells in same row
-    for (let c = 0; c < GRID_SIZE; c++) {
+    for (let c = 0; c < gridSize; c++) {
       eliminate(row, c)
     }
 
     // Eliminate all cells in same column
-    for (let r = 0; r < GRID_SIZE; r++) {
+    for (let r = 0; r < gridSize; r++) {
       eliminate(r, col)
     }
 
     // Eliminate all cells in same region
     const regionId = regions[row][col]
-    for (let r = 0; r < GRID_SIZE; r++) {
-      for (let c = 0; c < GRID_SIZE; c++) {
+    for (let r = 0; r < gridSize; r++) {
+      for (let c = 0; c < gridSize; c++) {
         if (regions[r][c] === regionId) {
           eliminate(r, c)
         }
@@ -97,7 +99,7 @@ export function solveWithTechniques(regions: number[][]): SolveResult {
       for (let dc = -1; dc <= 1; dc++) {
         const nr = row + dr
         const nc = col + dc
-        if (nr >= 0 && nr < GRID_SIZE && nc >= 0 && nc < GRID_SIZE) {
+        if (nr >= 0 && nr < gridSize && nc >= 0 && nc < gridSize) {
           eliminate(nr, nc)
         }
       }
@@ -107,7 +109,7 @@ export function solveWithTechniques(regions: number[][]): SolveResult {
   // Helper: get valid candidates for a row
   function getRowCandidates(row: number): number[] {
     const cols: number[] = []
-    for (let c = 0; c < GRID_SIZE; c++) {
+    for (let c = 0; c < gridSize; c++) {
       if (candidates[row][c]) cols.push(c)
     }
     return cols
@@ -116,7 +118,7 @@ export function solveWithTechniques(regions: number[][]): SolveResult {
   // Helper: get valid candidates for a column
   function getColCandidates(col: number): number[] {
     const rows: number[] = []
-    for (let r = 0; r < GRID_SIZE; r++) {
+    for (let r = 0; r < gridSize; r++) {
       if (candidates[r][col]) rows.push(r)
     }
     return rows
@@ -125,8 +127,8 @@ export function solveWithTechniques(regions: number[][]): SolveResult {
   // Helper: get valid candidates for a region
   function getRegionCandidates(regionId: number): Position[] {
     const cells: Position[] = []
-    for (let r = 0; r < GRID_SIZE; r++) {
-      for (let c = 0; c < GRID_SIZE; c++) {
+    for (let r = 0; r < gridSize; r++) {
+      for (let c = 0; c < gridSize; c++) {
         if (regions[r][c] === regionId && candidates[r][c]) {
           cells.push({ row: r, col: c })
         }
@@ -138,8 +140,8 @@ export function solveWithTechniques(regions: number[][]): SolveResult {
   // Helper: get region cells info
   function getRegionRows(regionId: number): Set<number> {
     const rows = new Set<number>()
-    for (let r = 0; r < GRID_SIZE; r++) {
-      for (let c = 0; c < GRID_SIZE; c++) {
+    for (let r = 0; r < gridSize; r++) {
+      for (let c = 0; c < gridSize; c++) {
         if (regions[r][c] === regionId && candidates[r][c]) {
           rows.add(r)
         }
@@ -150,8 +152,8 @@ export function solveWithTechniques(regions: number[][]): SolveResult {
 
   function getRegionCols(regionId: number): Set<number> {
     const cols = new Set<number>()
-    for (let r = 0; r < GRID_SIZE; r++) {
-      for (let c = 0; c < GRID_SIZE; c++) {
+    for (let r = 0; r < gridSize; r++) {
+      for (let c = 0; c < gridSize; c++) {
         if (regions[r][c] === regionId && candidates[r][c]) {
           cols.add(c)
         }
@@ -162,7 +164,7 @@ export function solveWithTechniques(regions: number[][]): SolveResult {
 
   // Technique 1: Naked Single in Row
   function tryNakedSingleRow(): boolean {
-    for (let r = 0; r < GRID_SIZE; r++) {
+    for (let r = 0; r < gridSize; r++) {
       if (rowHasQueen[r]) continue
       const cols = getRowCandidates(r)
       if (cols.length === 1) {
@@ -178,7 +180,7 @@ export function solveWithTechniques(regions: number[][]): SolveResult {
 
   // Technique 1: Naked Single in Column
   function tryNakedSingleCol(): boolean {
-    for (let c = 0; c < GRID_SIZE; c++) {
+    for (let c = 0; c < gridSize; c++) {
       if (colHasQueen[c]) continue
       const rows = getColCandidates(c)
       if (rows.length === 1) {
@@ -194,7 +196,7 @@ export function solveWithTechniques(regions: number[][]): SolveResult {
 
   // Technique 1: Naked Single in Region
   function tryNakedSingleRegion(): boolean {
-    for (let regionId = 0; regionId < NUM_REGIONS; regionId++) {
+    for (let regionId = 0; regionId < numRegions; regionId++) {
       if (regionHasQueen[regionId]) continue
       const cells = getRegionCandidates(regionId)
       if (cells.length === 1) {
@@ -210,7 +212,7 @@ export function solveWithTechniques(regions: number[][]): SolveResult {
 
   // Technique 2: Region locked to single row
   function tryRegionRowLock(): boolean {
-    for (let regionId = 0; regionId < NUM_REGIONS; regionId++) {
+    for (let regionId = 0; regionId < numRegions; regionId++) {
       if (regionHasQueen[regionId]) continue
       const regionRows = getRegionRows(regionId)
       if (regionRows.size === 1) {
@@ -225,7 +227,7 @@ export function solveWithTechniques(regions: number[][]): SolveResult {
           }
           // Eliminate other row candidates outside this region
           let eliminated = false
-          for (let c = 0; c < GRID_SIZE; c++) {
+          for (let c = 0; c < gridSize; c++) {
             if (candidates[row][c] && regions[row][c] !== regionId) {
               eliminate(row, c)
               eliminated = true
@@ -244,7 +246,7 @@ export function solveWithTechniques(regions: number[][]): SolveResult {
 
   // Technique 2: Region locked to single column
   function tryRegionColLock(): boolean {
-    for (let regionId = 0; regionId < NUM_REGIONS; regionId++) {
+    for (let regionId = 0; regionId < numRegions; regionId++) {
       if (regionHasQueen[regionId]) continue
       const regionCols = getRegionCols(regionId)
       if (regionCols.size === 1) {
@@ -259,7 +261,7 @@ export function solveWithTechniques(regions: number[][]): SolveResult {
           }
           // Eliminate other column candidates outside this region
           let eliminated = false
-          for (let r = 0; r < GRID_SIZE; r++) {
+          for (let r = 0; r < gridSize; r++) {
             if (candidates[r][col] && regions[r][col] !== regionId) {
               eliminate(r, col)
               eliminated = true
@@ -279,12 +281,12 @@ export function solveWithTechniques(regions: number[][]): SolveResult {
   // Technique 3: Hidden single - cell is only valid spot for row in its region
   function tryHiddenSingle(): boolean {
     // Check if a cell is the only one in its region that can satisfy a row constraint
-    for (let row = 0; row < GRID_SIZE; row++) {
+    for (let row = 0; row < gridSize; row++) {
       if (rowHasQueen[row]) continue
 
       // Group candidates by region
       const candidatesByRegion = new Map<number, Position[]>()
-      for (let c = 0; c < GRID_SIZE; c++) {
+      for (let c = 0; c < gridSize; c++) {
         if (candidates[row][c]) {
           const regionId = regions[row][c]
           if (!candidatesByRegion.has(regionId)) {
@@ -306,11 +308,11 @@ export function solveWithTechniques(regions: number[][]): SolveResult {
     }
 
     // Check columns similarly
-    for (let col = 0; col < GRID_SIZE; col++) {
+    for (let col = 0; col < gridSize; col++) {
       if (colHasQueen[col]) continue
 
       const candidatesByRegion = new Map<number, Position[]>()
-      for (let r = 0; r < GRID_SIZE; r++) {
+      for (let r = 0; r < gridSize; r++) {
         if (candidates[r][col]) {
           const regionId = regions[r][col]
           if (!candidatesByRegion.has(regionId)) {
@@ -337,7 +339,7 @@ export function solveWithTechniques(regions: number[][]): SolveResult {
   function tryIntersectionElimination(): boolean {
     // If all candidates for a row within a region are in the same row,
     // eliminate other candidates in that row outside the region
-    for (let regionId = 0; regionId < NUM_REGIONS; regionId++) {
+    for (let regionId = 0; regionId < numRegions; regionId++) {
       if (regionHasQueen[regionId]) continue
 
       const cells = getRegionCandidates(regionId)
@@ -349,7 +351,7 @@ export function solveWithTechniques(regions: number[][]): SolveResult {
         const row = Array.from(rows)[0]
         if (row !== undefined) {
           let eliminated = false
-          for (let c = 0; c < GRID_SIZE; c++) {
+          for (let c = 0; c < gridSize; c++) {
             if (candidates[row][c] && regions[row][c] !== regionId) {
               eliminate(row, c)
               eliminated = true
@@ -369,7 +371,7 @@ export function solveWithTechniques(regions: number[][]): SolveResult {
         const col = Array.from(cols)[0]
         if (col !== undefined) {
           let eliminated = false
-          for (let r = 0; r < GRID_SIZE; r++) {
+          for (let r = 0; r < gridSize; r++) {
             if (candidates[r][col] && regions[r][col] !== regionId) {
               eliminate(r, col)
               eliminated = true
@@ -388,8 +390,8 @@ export function solveWithTechniques(regions: number[][]): SolveResult {
 
   // Technique 5: Forced elimination (if queen here, another region has no valid cells)
   function tryForcedElimination(): boolean {
-    for (let r = 0; r < GRID_SIZE; r++) {
-      for (let c = 0; c < GRID_SIZE; c++) {
+    for (let r = 0; r < gridSize; r++) {
+      for (let c = 0; c < gridSize; c++) {
         if (!candidates[r][c]) continue
 
         // Simulate placing queen here
@@ -398,13 +400,13 @@ export function solveWithTechniques(regions: number[][]): SolveResult {
 
         // Check what regions would be affected
         // Same row
-        for (let cc = 0; cc < GRID_SIZE; cc++) {
+        for (let cc = 0; cc < gridSize; cc++) {
           if (candidates[r][cc] && regions[r][cc] !== regionId) {
             affectedRegions.add(regions[r][cc])
           }
         }
         // Same column
-        for (let rr = 0; rr < GRID_SIZE; rr++) {
+        for (let rr = 0; rr < gridSize; rr++) {
           if (candidates[rr][c] && regions[rr][c] !== regionId) {
             affectedRegions.add(regions[rr][c])
           }
@@ -414,7 +416,7 @@ export function solveWithTechniques(regions: number[][]): SolveResult {
           for (let dc = -1; dc <= 1; dc++) {
             const nr = r + dr
             const nc = c + dc
-            if (nr >= 0 && nr < GRID_SIZE && nc >= 0 && nc < GRID_SIZE) {
+            if (nr >= 0 && nr < gridSize && nc >= 0 && nc < gridSize) {
               if (candidates[nr][nc] && regions[nr][nc] !== regionId) {
                 affectedRegions.add(regions[nr][nc])
               }
@@ -452,7 +454,7 @@ export function solveWithTechniques(regions: number[][]): SolveResult {
   const maxIterations = 1000
   let iterations = 0
 
-  while (placedQueens.length < NUM_REGIONS && iterations < maxIterations) {
+  while (placedQueens.length < numRegions && iterations < maxIterations) {
     iterations++
 
     // Try techniques in order of difficulty
@@ -469,7 +471,7 @@ export function solveWithTechniques(regions: number[][]): SolveResult {
     break
   }
 
-  const solved = placedQueens.length === NUM_REGIONS
+  const solved = placedQueens.length === numRegions
   const requiresGuessing = !solved && iterations < maxIterations
 
   return {

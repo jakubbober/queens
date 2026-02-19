@@ -12,7 +12,7 @@ const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)
 
 // Import types and functions
-import { Position, GRID_SIZE, NUM_REGIONS } from '../src/types/game'
+import { Position } from '../src/types/game'
 import { hasUniqueSolution } from '../src/engine/solver'
 import { areAllRegionsConnected } from '../src/engine/regions'
 import { ratePuzzleDifficulty, Technique } from '../src/engine/humanSolver'
@@ -37,7 +37,7 @@ function shuffle<T>(array: T[], random: () => number): T[] {
 }
 
 // Generate a valid queen placement
-function generateQueenPlacement(random: () => number): Position[] | null {
+function generateQueenPlacement(random: () => number, gridSize: number): Position[] | null {
   const solution: Position[] = []
   const usedCols = new Set<number>()
 
@@ -46,9 +46,9 @@ function generateQueenPlacement(random: () => number): Position[] | null {
   }
 
   function backtrack(row: number): boolean {
-    if (row === GRID_SIZE) return true
+    if (row === gridSize) return true
 
-    const cols = shuffle([0, 1, 2, 3, 4, 5, 6, 7, 8], random)
+    const cols = shuffle(Array.from({ length: gridSize }, (_, i) => i), random)
 
     for (const col of cols) {
       if (usedCols.has(col)) continue
@@ -98,13 +98,13 @@ function isCellSafeForRegion(cell: Position, solution: Position[], regionIdx: nu
   return false
 }
 
-function getNeighbors(row: number, col: number): Position[] {
+function getNeighbors(row: number, col: number, gridSize: number): Position[] {
   const neighbors: Position[] = []
   const directions = [[-1, 0], [1, 0], [0, -1], [0, 1]]
   for (const [dr, dc] of directions) {
     const nr = row + dr
     const nc = col + dc
-    if (nr >= 0 && nr < GRID_SIZE && nc >= 0 && nc < GRID_SIZE) {
+    if (nr >= 0 && nr < gridSize && nc >= 0 && nc < gridSize) {
       neighbors.push({ row: nr, col: nc })
     }
   }
@@ -112,17 +112,18 @@ function getNeighbors(row: number, col: number): Position[] {
 }
 
 // Generate regions with varied regularity
-function generateRegions(solution: Position[], random: () => number, regularity: number): number[][] | null {
-  const regions: number[][] = Array(GRID_SIZE).fill(null).map(() => Array(GRID_SIZE).fill(-1))
-  const regionSizes: number[] = Array(NUM_REGIONS).fill(0)
+function generateRegions(solution: Position[], random: () => number, regularity: number, gridSize: number): number[][] | null {
+  const numRegions = gridSize
+  const regions: number[][] = Array(gridSize).fill(null).map(() => Array(gridSize).fill(-1))
+  const regionSizes: number[] = Array(numRegions).fill(0)
 
   // Pre-compute safe regions
   const safeFor: Map<string, number[]> = new Map()
-  for (let r = 0; r < GRID_SIZE; r++) {
-    for (let c = 0; c < GRID_SIZE; c++) {
+  for (let r = 0; r < gridSize; r++) {
+    for (let c = 0; c < gridSize; c++) {
       const cell = { row: r, col: c }
       const safeRegions: number[] = []
-      for (let regionId = 0; regionId < NUM_REGIONS; regionId++) {
+      for (let regionId = 0; regionId < numRegions; regionId++) {
         if (solution[regionId].row === r && solution[regionId].col === c) {
           safeRegions.push(regionId)
         } else if (isCellSafeForRegion(cell, solution, regionId)) {
@@ -141,7 +142,7 @@ function generateRegions(solution: Position[], random: () => number, regularity:
   }
 
   // Grow regions
-  const targetSize = Math.ceil((GRID_SIZE * GRID_SIZE) / NUM_REGIONS)
+  const targetSize = Math.ceil((gridSize * gridSize) / numRegions)
 
   interface QueueEntry {
     row: number
@@ -152,13 +153,13 @@ function generateRegions(solution: Position[], random: () => number, regularity:
 
   const rebuildQueue = (): QueueEntry[] => {
     const queue: QueueEntry[] = []
-    for (let r = 0; r < GRID_SIZE; r++) {
-      for (let c = 0; c < GRID_SIZE; c++) {
+    for (let r = 0; r < gridSize; r++) {
+      for (let c = 0; c < gridSize; c++) {
         if (regions[r][c] !== -1) continue
 
         const cellSafeRegions = safeFor.get(`${r},${c}`) || []
 
-        for (const neighbor of getNeighbors(r, c)) {
+        for (const neighbor of getNeighbors(r, c, gridSize)) {
           if (regions[neighbor.row][neighbor.col] !== -1) {
             const regionId = regions[neighbor.row][neighbor.col]
 
@@ -181,7 +182,7 @@ function generateRegions(solution: Position[], random: () => number, regularity:
   }
 
   let iterations = 0
-  const maxIterations = GRID_SIZE * GRID_SIZE * 3
+  const maxIterations = gridSize * gridSize * 3
 
   while (iterations < maxIterations) {
     iterations++
@@ -198,7 +199,7 @@ function generateRegions(solution: Position[], random: () => number, regularity:
     if (regions[best.row][best.col] !== -1) continue
 
     let adjacentToRegion = false
-    for (const neighbor of getNeighbors(best.row, best.col)) {
+    for (const neighbor of getNeighbors(best.row, best.col, gridSize)) {
       if (regions[neighbor.row][neighbor.col] === best.regionId) {
         adjacentToRegion = true
         break
@@ -211,13 +212,13 @@ function generateRegions(solution: Position[], random: () => number, regularity:
   }
 
   // Handle unassigned cells
-  for (let r = 0; r < GRID_SIZE; r++) {
-    for (let c = 0; c < GRID_SIZE; c++) {
+  for (let r = 0; r < gridSize; r++) {
+    for (let c = 0; c < gridSize; c++) {
       if (regions[r][c] === -1) {
         const cellSafeRegions = safeFor.get(`${r},${c}`) || []
         let assigned = false
 
-        for (const neighbor of getNeighbors(r, c)) {
+        for (const neighbor of getNeighbors(r, c, gridSize)) {
           if (regions[neighbor.row][neighbor.col] !== -1) {
             const regionId = regions[neighbor.row][neighbor.col]
             if (cellSafeRegions.includes(regionId)) {
@@ -231,9 +232,9 @@ function generateRegions(solution: Position[], random: () => number, regularity:
 
         if (!assigned) {
           let bestRegion = -1
-          let bestQueenRow = GRID_SIZE + 1
+          let bestQueenRow = gridSize + 1
 
-          for (const neighbor of getNeighbors(r, c)) {
+          for (const neighbor of getNeighbors(r, c, gridSize)) {
             if (regions[neighbor.row][neighbor.col] !== -1) {
               const regionId = regions[neighbor.row][neighbor.col]
               const queenRow = solution[regionId].row
@@ -254,15 +255,15 @@ function generateRegions(solution: Position[], random: () => number, regularity:
   }
 
   // Final pass for isolated cells
-  for (let r = 0; r < GRID_SIZE; r++) {
-    for (let c = 0; c < GRID_SIZE; c++) {
+  for (let r = 0; r < gridSize; r++) {
+    for (let c = 0; c < gridSize; c++) {
       if (regions[r][c] === -1) {
-        for (let dist = 1; dist < GRID_SIZE && regions[r][c] === -1; dist++) {
+        for (let dist = 1; dist < gridSize && regions[r][c] === -1; dist++) {
           for (let dr = -dist; dr <= dist; dr++) {
             for (let dc = -dist; dc <= dist; dc++) {
               const nr = r + dr
               const nc = c + dc
-              if (nr >= 0 && nr < GRID_SIZE && nc >= 0 && nc < GRID_SIZE) {
+              if (nr >= 0 && nr < gridSize && nc >= 0 && nc < gridSize) {
                 if (regions[nr][nc] !== -1) {
                   regions[r][c] = regions[nr][nc]
                   regionSizes[regions[r][c]]++
@@ -281,10 +282,10 @@ function generateRegions(solution: Position[], random: () => number, regularity:
 }
 
 // Check minimum region size
-function checkMinRegionSize(regions: number[][], minSize: number): boolean {
-  const sizes = Array(NUM_REGIONS).fill(0)
-  for (let r = 0; r < GRID_SIZE; r++) {
-    for (let c = 0; c < GRID_SIZE; c++) {
+function checkMinRegionSize(regions: number[][], minSize: number, gridSize: number): boolean {
+  const sizes = Array(gridSize).fill(0)
+  for (let r = 0; r < gridSize; r++) {
+    for (let c = 0; c < gridSize; c++) {
       sizes[regions[r][c]]++
     }
   }
@@ -292,21 +293,21 @@ function checkMinRegionSize(regions: number[][], minSize: number): boolean {
 }
 
 // Generate a single puzzle
-function generatePuzzle(seed: number, regularity: number): {
+function generatePuzzle(seed: number, regularity: number, gridSize: number): {
   regions: number[][]
   solution: Position[]
 } | null {
   const random = createSeededRandom(seed)
 
   for (let attempt = 0; attempt < 50; attempt++) {
-    const solution = generateQueenPlacement(random)
+    const solution = generateQueenPlacement(random, gridSize)
     if (!solution) continue
 
-    const regions = generateRegions(solution, random, regularity)
+    const regions = generateRegions(solution, random, regularity, gridSize)
     if (!regions) continue
 
     if (!areAllRegionsConnected(regions)) continue
-    if (!checkMinRegionSize(regions, 3)) continue
+    if (!checkMinRegionSize(regions, 3, gridSize)) continue
     if (!hasUniqueSolution(regions)) continue
 
     return { regions, solution }
@@ -321,13 +322,24 @@ interface RatedPuzzle {
   difficulty: 'easy' | 'medium' | 'hard' | 'expert'
   maxTechnique: number
   stepCount: number
+  gridSize: number
+}
+
+// Check if any row is entirely one color (region)
+function hasEntireRowSingleColor(regions: number[][]): boolean {
+  for (let r = 0; r < regions.length; r++) {
+    const firstColor = regions[r][0]
+    if (regions[r].every(c => c === firstColor)) {
+      return true
+    }
+  }
+  return false
 }
 
 async function main() {
-  console.log('Starting puzzle bank generation...')
+  console.log('Starting puzzle bank generation (9x9 + 10x10, all difficulties, max 3 minutes)...')
 
-  // Targets for each difficulty - only generate hard, skip easy/medium
-  const targets = { easy: 100, medium: 100, hard: 50, expert: 0 }
+  const targetPerDifficulty = 30
   const bank: { easy: RatedPuzzle[], medium: RatedPuzzle[], hard: RatedPuzzle[], expert: RatedPuzzle[] } = {
     easy: [],
     medium: [],
@@ -338,54 +350,67 @@ async function main() {
   let seed = 1
   let attempts = 0
   const maxAttempts = 100000
-  // Use lower regularity values to create more complex region shapes (harder puzzles)
+  const maxDuration = 3 * 60 * 1000 // 3 minutes
+  const startTime = Date.now()
   const regularities = [0.1, 0.2, 0.3, 0.4]
+  const gridSizes = [9, 10]
 
-  while (
-    (bank.easy.length < targets.easy ||
-     bank.medium.length < targets.medium ||
-     bank.hard.length < targets.hard ||
-     bank.expert.length < targets.expert) &&
-    attempts < maxAttempts
-  ) {
+  const allFull = () =>
+    bank.easy.length >= targetPerDifficulty &&
+    bank.medium.length >= targetPerDifficulty &&
+    bank.hard.length >= targetPerDifficulty &&
+    bank.expert.length >= targetPerDifficulty
+
+  while (!allFull() && attempts < maxAttempts) {
+    if (Date.now() - startTime > maxDuration) {
+      console.log('\nTime limit reached (3 minutes). Using collected puzzles.')
+      break
+    }
+
     attempts++
 
-    // Vary regularity to get different puzzle styles
+    // Vary regularity and grid size to get different puzzle styles
     const regularity = regularities[attempts % regularities.length]
+    const gridSize = gridSizes[attempts % gridSizes.length]
 
-    const puzzle = generatePuzzle(seed++, regularity)
+    const puzzle = generatePuzzle(seed++, regularity, gridSize)
     if (!puzzle) continue
+
+    // Skip maps where any entire row is a single color
+    if (hasEntireRowSingleColor(puzzle.regions)) continue
 
     const rating = ratePuzzleDifficulty(puzzle.regions)
 
     if (!rating.solvable || rating.requiresGuessing) continue
 
-    const ratedPuzzle: RatedPuzzle = {
+    const diff = rating.difficulty
+    if (bank[diff].length >= targetPerDifficulty) continue
+
+    bank[diff].push({
       regions: puzzle.regions,
       solution: puzzle.solution,
-      difficulty: rating.difficulty,
+      difficulty: diff,
       maxTechnique: rating.maxTechnique,
-      stepCount: rating.stepCount
-    }
-
-    // Only add if we need more of this difficulty
-    if (rating.difficulty === 'easy' && bank.easy.length < targets.easy) {
-      bank.easy.push(ratedPuzzle)
-      if (bank.easy.length % 20 === 0) console.log(`Easy: ${bank.easy.length}/${targets.easy}`)
-    } else if (rating.difficulty === 'medium' && bank.medium.length < targets.medium) {
-      bank.medium.push(ratedPuzzle)
-      if (bank.medium.length % 20 === 0) console.log(`Medium: ${bank.medium.length}/${targets.medium}`)
-    } else if (rating.difficulty === 'hard' && bank.hard.length < targets.hard) {
-      bank.hard.push(ratedPuzzle)
-      console.log(`Hard: ${bank.hard.length}/${targets.hard}`)
-    } else if (rating.difficulty === 'expert' && bank.expert.length < targets.expert) {
-      bank.expert.push(ratedPuzzle)
-      console.log(`Expert: ${bank.expert.length}/${targets.expert}`)
-    }
+      stepCount: rating.stepCount,
+      gridSize
+    })
+    const totals = `easy:${bank.easy.length} medium:${bank.medium.length} hard:${bank.hard.length} expert:${bank.expert.length}`
+    console.log(`${diff}: added (${gridSize}x${gridSize}) — ${totals}`)
   }
 
-  console.log(`\nGeneration complete after ${attempts} attempts:`)
-  console.log(`Easy: ${bank.easy.length}, Medium: ${bank.medium.length}, Hard: ${bank.hard.length}, Expert: ${bank.expert.length}`)
+  const elapsed = Math.round((Date.now() - startTime) / 1000)
+  console.log(`\nGeneration complete after ${attempts} attempts (${elapsed}s):`)
+  console.log(`easy:${bank.easy.length} medium:${bank.medium.length} hard:${bank.hard.length} expert:${bank.expert.length}`)
+
+  // If harder buckets are empty, fill them from medium/easy as fallback
+  if (bank.hard.length === 0 && bank.medium.length > 0) {
+    bank.hard.push(...bank.medium.slice(0, Math.min(targetPerDifficulty, bank.medium.length)))
+    console.log(`Filled hard from medium: ${bank.hard.length} puzzles`)
+  }
+  if (bank.expert.length === 0 && bank.hard.length > 0) {
+    bank.expert.push(...bank.hard.slice(0, Math.min(targetPerDifficulty, bank.hard.length)))
+    console.log(`Filled expert from hard: ${bank.expert.length} puzzles`)
+  }
 
   // Generate the output file
   const output = `/**
@@ -403,6 +428,7 @@ export interface RatedPuzzle {
   difficulty: 'easy' | 'medium' | 'hard' | 'expert'
   maxTechnique: number
   stepCount: number
+  gridSize: number
 }
 
 export const PUZZLE_BANK: {

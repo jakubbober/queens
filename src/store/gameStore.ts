@@ -22,8 +22,8 @@ function shuffleArray<T>(array: T[]): T[] {
 }
 
 // Generate a shuffled color mapping
-function generateColorMapping(): number[] {
-  return shuffleArray([0, 1, 2, 3, 4, 5, 6, 7, 8])
+function generateColorMapping(size: number): number[] {
+  return shuffleArray(Array.from({ length: size }, (_, i) => i))
 }
 
 const initialState: Omit<GameState, 'puzzle'> & { puzzle: null } = {
@@ -38,9 +38,9 @@ const initialState: Omit<GameState, 'puzzle'> & { puzzle: null } = {
   hintsUsed: 0,
   currentHint: null,
   isDragging: false,
-  difficulty: 'medium',
+  difficulty: 'expert',
   isDailyPuzzle: true,
-  colorMapping: [0, 1, 2, 3, 4, 5, 6, 7, 8]
+  colorMapping: []
 }
 
 export const useGameStore = create<GameStore>((set, get) => ({
@@ -55,7 +55,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
       difficulty,
       settings, // Preserve user's settings
       isDailyPuzzle: true,
-      colorMapping: generateColorMapping(),
+      colorMapping: generateColorMapping(puzzle.regions.length),
       history: { past: [], future: [] }
     })
   },
@@ -73,7 +73,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
       difficulty,
       settings, // Preserve user's settings
       isDailyPuzzle: false,
-      colorMapping: generateColorMapping(),
+      colorMapping: generateColorMapping(puzzle.regions.length),
       history: { past: [], future: [] }
     })
   },

@@ -3,7 +3,6 @@ import { useGameStore } from '../../store/gameStore'
 import { validatePlacement } from '../../engine/validator'
 import { Cell } from '../Cell/Cell'
 import { useDragToMark } from '../../hooks/useDragToMark'
-import { GRID_SIZE } from '../../types/game'
 import './GameBoard.css'
 
 export function GameBoard() {
@@ -20,6 +19,7 @@ export function GameBoard() {
   const colorMapping = useGameStore(state => state.colorMapping)
 
   const boardRef = useRef<HTMLDivElement>(null)
+  const gridSize = puzzle?.regions.length ?? 10
 
   const {
     isDragging,
@@ -31,7 +31,7 @@ export function GameBoard() {
     handleTouchEnd,
     shouldPreventClick,
     resetDragFlag
-  } = useDragToMark(boardRef)
+  } = useDragToMark(boardRef, gridSize)
 
   if (!puzzle) {
     return <div className="game-board-loading">Loading puzzle...</div>
@@ -92,6 +92,7 @@ export function GameBoard() {
     <div
       ref={boardRef}
       className={`game-board ${isDragging ? 'dragging' : ''}`}
+      style={{ gridTemplateColumns: `repeat(${gridSize}, 1fr)` }}
       onMouseDown={handleMouseDown}
       onMouseMove={handleMouseMove}
       onMouseUp={handleMouseUp}
@@ -100,18 +101,18 @@ export function GameBoard() {
       onTouchMove={handleTouchMove}
       onTouchEnd={handleTouchEnd}
     >
-      {Array.from({ length: GRID_SIZE }).map((_, row) =>
-        Array.from({ length: GRID_SIZE }).map((_, col) => {
+      {Array.from({ length: gridSize }).map((_, row) =>
+        Array.from({ length: gridSize }).map((_, col) => {
           const key = `${row},${col}`
           const regionId = regions[row][col]
 
           // Calculate region borders
           const borderTop = row === 0 || regions[row - 1][col] !== regionId
           const borderBottom =
-            row === GRID_SIZE - 1 || regions[row + 1][col] !== regionId
+            row === gridSize - 1 || regions[row + 1][col] !== regionId
           const borderLeft = col === 0 || regions[row][col - 1] !== regionId
           const borderRight =
-            col === GRID_SIZE - 1 || regions[row][col + 1] !== regionId
+            col === gridSize - 1 || regions[row][col + 1] !== regionId
 
           return (
             <Cell

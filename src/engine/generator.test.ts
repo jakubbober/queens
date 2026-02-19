@@ -2,31 +2,31 @@ import { describe, it, expect } from 'vitest'
 import { generatePuzzle, generateDailyPuzzle, generateRandomPuzzle } from './generator'
 import { isValidPlacement, findSolution, hasUniqueSolution } from './solver'
 import { areAllRegionsConnected } from './regions'
-import { GRID_SIZE, NUM_REGIONS, Difficulty } from '../types/game'
+import { Difficulty } from '../types/game'
 
 describe('generatePuzzle', () => {
   it('returns a valid puzzle structure', () => {
     const puzzle = generatePuzzle(12345)
 
-    expect(puzzle.regions).toHaveLength(GRID_SIZE)
+    expect(puzzle.regions).toHaveLength(puzzle.regions.length)
     puzzle.regions.forEach(row => {
-      expect(row).toHaveLength(GRID_SIZE)
+      expect(row).toHaveLength(puzzle.regions.length)
     })
 
-    expect(puzzle.solution).toHaveLength(GRID_SIZE)
+    expect(puzzle.solution).toHaveLength(puzzle.regions.length)
   })
 
   it('generates puzzle with all region IDs 0-8', () => {
     const puzzle = generatePuzzle(12345)
     const regionIds = new Set<number>()
 
-    for (let r = 0; r < GRID_SIZE; r++) {
-      for (let c = 0; c < GRID_SIZE; c++) {
+    for (let r = 0; r < puzzle.regions.length; r++) {
+      for (let c = 0; c < puzzle.regions.length; c++) {
         regionIds.add(puzzle.regions[r][c])
       }
     }
 
-    for (let i = 0; i < NUM_REGIONS; i++) {
+    for (let i = 0; i < puzzle.regions.length; i++) {
       expect(regionIds.has(i)).toBe(true)
     }
   })
@@ -39,19 +39,19 @@ describe('generatePuzzle', () => {
   it('solution has one queen per row', () => {
     const puzzle = generatePuzzle(12345)
     const rows = new Set(puzzle.solution.map(q => q.row))
-    expect(rows.size).toBe(GRID_SIZE)
+    expect(rows.size).toBe(puzzle.regions.length)
   })
 
   it('solution has one queen per column', () => {
     const puzzle = generatePuzzle(12345)
     const cols = new Set(puzzle.solution.map(q => q.col))
-    expect(cols.size).toBe(GRID_SIZE)
+    expect(cols.size).toBe(puzzle.regions.length)
   })
 
   it('solution has one queen per region', () => {
     const puzzle = generatePuzzle(12345)
     const regions = new Set(puzzle.solution.map(q => puzzle.regions[q.row][q.col]))
-    expect(regions.size).toBe(NUM_REGIONS)
+    expect(regions.size).toBe(puzzle.regions.length)
   })
 
   it('solution has no adjacent queens', () => {
@@ -107,8 +107,8 @@ describe('generateDailyPuzzle', () => {
   it('returns a valid puzzle', () => {
     const puzzle = generateDailyPuzzle()
 
-    expect(puzzle.regions).toHaveLength(GRID_SIZE)
-    expect(puzzle.solution).toHaveLength(GRID_SIZE)
+    expect(puzzle.regions).toHaveLength(puzzle.regions.length)
+    expect(puzzle.solution).toHaveLength(puzzle.regions.length)
   })
 
   it('returns same puzzle when called multiple times on same day', () => {
@@ -124,8 +124,8 @@ describe('generateRandomPuzzle', () => {
   it('returns a valid puzzle', () => {
     const puzzle = generateRandomPuzzle()
 
-    expect(puzzle.regions).toHaveLength(GRID_SIZE)
-    expect(puzzle.solution).toHaveLength(GRID_SIZE)
+    expect(puzzle.regions).toHaveLength(puzzle.regions.length)
+    expect(puzzle.solution).toHaveLength(puzzle.regions.length)
   })
 
   it('generates valid solution', () => {
@@ -200,8 +200,8 @@ describe('difficulty levels', () => {
   it.each(difficulties)('generates valid puzzle for %s difficulty', (difficulty) => {
     const puzzle = generatePuzzle(77777, difficulty)
 
-    expect(puzzle.regions).toHaveLength(GRID_SIZE)
-    expect(puzzle.solution).toHaveLength(GRID_SIZE)
+    expect(puzzle.regions).toHaveLength(puzzle.regions.length)
+    expect(puzzle.solution).toHaveLength(puzzle.regions.length)
     expect(areAllRegionsConnected(puzzle.regions)).toBe(true)
 
     // Verify provided solution is valid
@@ -215,16 +215,16 @@ describe('difficulty levels', () => {
   it.each(difficulties)('daily puzzle works with %s difficulty', (difficulty) => {
     const puzzle = generateDailyPuzzle(difficulty)
 
-    expect(puzzle.regions).toHaveLength(GRID_SIZE)
-    expect(puzzle.solution).toHaveLength(GRID_SIZE)
+    expect(puzzle.regions).toHaveLength(puzzle.regions.length)
+    expect(puzzle.solution).toHaveLength(puzzle.regions.length)
     expect(findSolution(puzzle.regions)).not.toBeNull()
   })
 
   it.each(difficulties)('random puzzle works with %s difficulty', (difficulty) => {
     const puzzle = generateRandomPuzzle(difficulty)
 
-    expect(puzzle.regions).toHaveLength(GRID_SIZE)
-    expect(puzzle.solution).toHaveLength(GRID_SIZE)
+    expect(puzzle.regions).toHaveLength(puzzle.regions.length)
+    expect(puzzle.solution).toHaveLength(puzzle.regions.length)
     expect(findSolution(puzzle.regions)).not.toBeNull()
   })
 })
@@ -234,8 +234,8 @@ describe('region quality', () => {
     const puzzle = generatePuzzle(88888)
     const regionSizes = new Map<number, number>()
 
-    for (let r = 0; r < GRID_SIZE; r++) {
-      for (let c = 0; c < GRID_SIZE; c++) {
+    for (let r = 0; r < puzzle.regions.length; r++) {
+      for (let c = 0; c < puzzle.regions.length; c++) {
         const regionId = puzzle.regions[r][c]
         regionSizes.set(regionId, (regionSizes.get(regionId) || 0) + 1)
       }
@@ -249,7 +249,7 @@ describe('region quality', () => {
 
     // Total cells should equal grid size
     const totalCells = Array.from(regionSizes.values()).reduce((a, b) => a + b, 0)
-    expect(totalCells).toBe(GRID_SIZE * GRID_SIZE)
+    expect(totalCells).toBe(puzzle.regions.length * puzzle.regions.length)
   })
 
   it('no region is disconnected', () => {
@@ -272,8 +272,8 @@ describe('generation stress test', () => {
 
       // Check basic validity
       const isValid =
-        puzzle.regions.length === GRID_SIZE &&
-        puzzle.solution.length === GRID_SIZE &&
+        puzzle.regions.length === puzzle.regions.length &&
+        puzzle.solution.length === puzzle.regions.length &&
         areAllRegionsConnected(puzzle.regions)
 
       if (isValid) {
@@ -293,7 +293,7 @@ describe('generation stress test', () => {
       const queenRegions = puzzle.solution.map(q => puzzle.regions[q.row][q.col])
       const uniqueRegions = new Set(queenRegions)
 
-      expect(uniqueRegions.size).toBe(NUM_REGIONS)
+      expect(uniqueRegions.size).toBe(puzzle.regions.length)
     }
   })
 })

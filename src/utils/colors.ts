@@ -8,6 +8,7 @@ export const REGION_COLORS = [
   '#fff5b3', // Light yellow
   '#ffc9e0', // Light pink
   '#c9c9c9', // Light gray
+  '#c9e8c9', // Light sage
 ]
 
 export const getRegionColor = (regionId: number, colorMapping?: number[]): string => {
